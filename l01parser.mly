@@ -4,9 +4,12 @@
   (* declaration *)
 
 %token EOL
-%token OPlus
+%token OPlus OMinus OTimes ODivide
+%token OOpenParen OClosedParen
 %token<int> IntLit
-%left OPlus /* lowest precedence */
+%left OPlus OMinus /* lowest precedence */
+%left OTimes ODivide /* mid-level precedence */
+%nonassoc OUminus
 %start main
 %type<int> main
 
@@ -17,8 +20,13 @@ main:
 ;
 
 exp:
-| exp OPlus exp     { $1 + $3 }
-| intlit            { $1 }
+| intlit             { $1 }
+| OOpenParen exp OClosedParen { $2 }
+| exp OPlus exp      { $1 + $3 }
+| exp OMinus exp     { $1 - $3 }
+| exp OTimes exp     { $1 * $3 }
+| exp ODivide exp     { $1 / $3 }
+| OMinus exp %prec OUminus         { - $2 }
 ;
 
 intlit:

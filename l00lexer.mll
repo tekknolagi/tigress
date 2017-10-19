@@ -19,20 +19,20 @@ rule token = parse
 | "nil"           { KNil }
 | "type"          { KType }
 *)
-| '-'? ['0'-'9']+ as num  { IntLit (int_of_string num) }
+| ['0'-'9']+ as num  { IntLit (int_of_string num) }
 (*
 | ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as ident 
                   { Ident ident}
 | "/*"            { KCommentStart }
 | "*/"            { KCommentEnd }
 *)
-| "+"             { OPlus }
-(*
 | "("             { OOpenParen }
 | ")"             { OClosedParen }
-| "-"             { ONegation }
-| "*"             { OMult }
+| "+"             { OPlus }
+| "-"             { OMinus }
+| "*"             { OTimes }
 | "/"             { ODivide }
+(*
 | "="             { OEquals }
 | "<>"            { ONotEquals }
 | "<"             { OLt }
