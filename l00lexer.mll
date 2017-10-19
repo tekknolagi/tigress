@@ -6,8 +6,8 @@
 rule token = parse
 | [' ' '\t']        { token lexbuf }
 | '\n'            { EOL }
-| "true"          { BoolLit true }
-| "false"         { BoolLit false }
+| "true"          { TBool true }
+| "false"         { TBool false }
 (*
 | "if"            { KIf }
 | "then"          { KThen }
@@ -19,7 +19,7 @@ rule token = parse
 | "nil"           { KNil }
 | "type"          { KType }
 *)
-| ['0'-'9']+ as num  { IntLit (int_of_string num) }
+| ['0'-'9']+ as num  { TInt (int_of_string num) }
 (*
 | ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as ident 
                   { Ident ident}
