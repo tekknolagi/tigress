@@ -1,19 +1,27 @@
 %{
-	(* header *)
+  (* header *)
 %}
-	(* declaration *)
+  (* declaration *)
 
 %token EOL
+%token OPlus
+%token<int> IntLit
+%left OPlus /* lowest precedence */
 %start main
-%type<unit> main
+%type<int> main
 
 %%
-	(* rules *)
+  (* rules *)
 main:
-  EOL { () }
+  exp EOL { $1 }
 ;
 
 exp:
-| exp (Op Plus) exp 		{ $1 + $2 }
+| exp OPlus exp     { $1 + $3 }
+| intlit            { $1 }
+;
+
+intlit:
+| IntLit { $1 }
 ;
 %%

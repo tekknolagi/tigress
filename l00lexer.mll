@@ -1,43 +1,49 @@
 {
-  open Parser
+  open L01parser
   exception Eof
 }
 
 rule token = parse
-| [' ' '\t'] 				{ token lexbuf }
-| '\n' 						{ EOL }
-| "true"					{ BoolLit true }
-| "false"					{ BoolLit false }
-| "if"						{ Keyword If }
-| "then"					{ Keyword Then }
-| "else" 					{ Keyword Else }
-| "end"						{ Keyword End }
-| "fun"						{ Keyword Function }
-| "in"						{ Keyword In }
-| "let"						{ Keyword Let }
-| "nil"						{ ListLit Nil }
-| "type"					{ Keyword Type }
-| '-'? ['0'-'9']+ as num	{ IntLit num }
+| [' ' '\t']        { token lexbuf }
+| '\n'            { EOL }
+(*
+| "true"          { BoolLit true }
+| "false"         { BoolLit false }
+| "if"            { KIf }
+| "then"          { KThen }
+| "else"          { KElse }
+| "end"           { KEnd }
+| "fun"           { KFunction }
+| "in"            { KIn }
+| "let"           { KLet }
+| "nil"           { KNil }
+| "type"          { KType }
+*)
+| '-'? ['0'-'9']+ as num  { IntLit (int_of_string num) }
+(*
 | ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as ident 
-							{ Ident ident}
-| "/*"						{ Keyword CommentStart }
-| "*/"						{ Keyword CommentEnd }
-| "+"						{ Op Plus }
-| "("						{ Op OpenParen }
-| ")"						{ Op ClosedParen }
-| "-"						{ Op Negation }
-| "*"						{ Op Mult }
-| "/"						{ Op Divide }
-| "="						{ Op Equals }
-| "<>"						{ Op NotEquals }
-| "<"						{ Op Lt }
-| ">"						{ Op Gt }
-| "<="						{ Op Lte }
-| ">="						{ Op Gte }
-| "&"						{ Op LogAnd }
-| "|"						{ Op LogOr }
+                  { Ident ident}
+| "/*"            { KCommentStart }
+| "*/"            { KCommentEnd }
+*)
+| "+"             { OPlus }
+(*
+| "("             { OOpenParen }
+| ")"             { OClosedParen }
+| "-"             { ONegation }
+| "*"             { OMult }
+| "/"             { ODivide }
+| "="             { OEquals }
+| "<>"            { ONotEquals }
+| "<"             { OLt }
+| ">"             { OGt }
+| "<="            { OLte }
+| ">="            { OGte }
+| "&"             { OLogAnd }
+| "|"             { OLogOr }
+*)
 
 (* Still needs to be implemented: 
-	strings
-*)
+  strings
+  *)
 
