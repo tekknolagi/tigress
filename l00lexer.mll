@@ -6,9 +6,9 @@
 rule token = parse
 | [' ' '\t']        { token lexbuf }
 | '\n'            { EOL }
-(*
 | "true"          { BoolLit true }
 | "false"         { BoolLit false }
+(*
 | "if"            { KIf }
 | "then"          { KThen }
 | "else"          { KElse }
