@@ -8,11 +8,11 @@ rule token = parse
 | '\n'            { EOL }
 | "true"          { TBool true }
 | "false"         { TBool false }
-(*
 | "if"            { KIf }
 | "then"          { KThen }
 | "else"          { KElse }
 | "end"           { KEnd }
+(*
 | "fun"           { KFunction }
 | "in"            { KIn }
 | "let"           { KLet }

@@ -7,4 +7,4 @@ all:
 	# ocamlc -c l00lexer.ml
 	# ocamlc -c main.ml
 	# ocamlc l00lexer.cmo l01parser.cmo l02ast.cmo main.cmo
-	ocamlbuild main.native
+	ocamlbuild -use-menhir -yaccflags '--infer' main.native
