@@ -22,22 +22,22 @@ rule token = parse
 							{ Ident ident}
 | "/*"						{ Keyword CommentStart }
 | "*/"						{ Keyword CommentEnd }
-| "+"						
-| "("						
-| ")"						
-| "-"						
-| "*"						
-| "/"						
-| "="						
-| "<>"						
-| "<"						
-| ">"						
-| "<="						
-| ">="						
-| "&"						
-| "|" as op
+| "+"						{ Op Plus }
+| "("						{ Op OpenParen }
+| ")"						{ Op ClosedParen }
+| "-"						{ Op Negation }
+| "*"						{ Op Mult }
+| "/"						{ Op Divide }
+| "="						{ Op Equals }
+| "<>"						{ Op NotEquals }
+| "<"						{ Op Lt }
+| ">"						{ Op Gt }
+| "<="						{ Op Lte }
+| ">="						{ Op Gte }
+| "&"						{ Op LogAnd }
+| "|"						{ Op LogOr }
 
-{ Operator op }
 (* Still needs to be implemented: 
 	strings
 *)
+
