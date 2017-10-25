@@ -4,10 +4,14 @@
 
 %token EOL
 %token OPlus OMinus OTimes ODivide
+%token OEquals
 %token OOpenParen OClosedParen
 %token KIf KThen KElse KEnd
+%token KLet KIn
 %token<int> TInt
 %token<bool> TBool
+%token<string> Atom
+%token<string> Ident
 %left OPlus OMinus /* lowest precedence */
 %left OTimes ODivide /* mid-level precedence */
 %nonassoc OUminus /* highest precedence */
@@ -31,6 +35,9 @@ exp:
 | OMinus exp %prec OUminus         { L02ast.(Minus(IntLit 0, $2)) }
 | KIf exp KThen exp KElse exp KEnd { L02ast.IfElse($2, $4, $6) }
 | KIf exp KThen exp KEnd           { L02ast.(IfElse($2, $4, UnitLit)) }
+| Atom                             { L02ast.Atom $1 }
+| Ident                            { L02ast.Var $1 }
+| letexp                           { $1 }
 ;
 
 boollit:
@@ -44,4 +51,9 @@ intlit:
 unitlit:
 | OOpenParen OClosedParen   { L02ast.UnitLit }
 ;
+
+letexp:
+| KLet Ident OEquals exp KIn exp KEnd    { L02ast.(Let($2, $4, $6)) }
+;
+
 %%

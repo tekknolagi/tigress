@@ -12,17 +12,20 @@ rule token = parse
 | "then"          { KThen }
 | "else"          { KElse }
 | "end"           { KEnd }
+| "let"           { KLet }
+| "in"            { KIn }
 (*
 | "fun"           { KFunction }
-| "in"            { KIn }
-| "let"           { KLet }
 | "nil"           { KNil }
 | "type"          { KType }
 *)
-| ['0'-'9']+ as num  { TInt (int_of_string num) }
-(*
-| ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as ident 
+| ['0'-'9']+ as num
+                  { TInt (int_of_string num) }
+| ['A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as ident
                   { Ident ident}
+| ['a'-'z' '_']+ as atom
+                  { Atom atom }
+(*
 | "/*"            { KCommentStart }
 | "*/"            { KCommentEnd }
 *)
@@ -32,8 +35,8 @@ rule token = parse
 | "-"             { OMinus }
 | "*"             { OTimes }
 | "/"             { ODivide }
-(*
 | "="             { OEquals }
+(*
 | "<>"            { ONotEquals }
 | "<"             { OLt }
 | ">"             { OGt }
@@ -42,8 +45,10 @@ rule token = parse
 | "&"             { OLogAnd }
 | "|"             { OLogOr }
 *)
+(* 
+and
 
-(* Still needs to be implemented: 
+Still needs to be implemented: 
   strings
   *)
 
