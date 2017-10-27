@@ -74,7 +74,6 @@ let rec string_of_aexp f exp =
 
 
 exception TypeError of string
-exception Unsupported
 
 let tyOf = function
   | BoolLit (_, a) | IntLit (_, a) | AtomLit (_, a) | Var (_, a) -> a
@@ -91,6 +90,7 @@ let rec typecheck varenv = function
   | IntLit (i, a) -> IntLit (i, IntTy)
   | UnitLit a -> UnitLit UnitTy
   | AtomLit (at, a) -> AtomLit (at, AtomTy)
+  | Var (n, a) -> Var (n, List.assoc n varenv)
   | Plus (e1, e2, a) ->
       let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
       (match (tyOf t1, tyOf t2) with
@@ -118,4 +118,7 @@ let rec typecheck varenv = function
       (match (tyOf tift, tyOf tiff) with
       | (t1, t2) when t1=t2 -> IfElse (tcond, tift, tiff, tyOf tift)
       | (t1, t2) -> tyMismatch "if" t1 t2)
-  | _ -> raise Unsupported
+  | Let (n, e, b, a) ->
+      let te = typecheck varenv e in
+      let tb = typecheck ((n, tyOf te)::varenv) b in
+      Let (n, te, tb, tyOf tb)
