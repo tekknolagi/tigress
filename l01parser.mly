@@ -6,10 +6,10 @@
 %token EOL
 %token OPlus OMinus OTimes ODivide
 %token ONot ONotEquals OLt OGt OLte OGte
-%token OEquals OColon
+%token OEquals OColon OComma
 %token OOpenParen OClosedParen
 %token KIf KThen KElse KEnd
-%token KLet KIn
+%token KLet KIn KFun
 %token<int> TInt
 %token<bool> TBool
 %token<string> TAtom
@@ -51,6 +51,7 @@ exp:
 | KIf exp KThen exp KEnd           { L02ast.(IfElse($2, $4, UnitLit (), ())) }
 | TAtom                            { L02ast.AtomLit($1, ()) }
 | Ident                            { L02ast.Var($1, ()) }
+| funexp
 | letexp                           { $1 }
 ;
 
@@ -66,9 +67,17 @@ unitlit:
 | OOpenParen OClosedParen   { L02ast.UnitLit () }
 ;
 
+vardecl:
+| Ident OColon ty   { ($1, $3) }
+
+funexp:
+| KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty OEquals exp KEnd
+    { L02ast.Fun($3, $6, $8, ()) }
+;
+
 letexp:
-| KLet Ident OColon ty OEquals exp KIn exp KEnd
-      { L02ast.(Let($2, $4, $6, $8, ())) }
+| KLet vardecl OEquals exp KIn exp KEnd
+      { L02ast.(Let($2, $4, $6, ())) }
 ;
 
 ty:

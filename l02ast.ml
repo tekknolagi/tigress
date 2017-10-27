@@ -20,7 +20,10 @@ type 'a exp =
   | Gte of ('a exp * 'a exp * 'a)
 
   | IfElse of ('a exp * 'a exp * 'a exp * 'a)
-  | Let of (name * ty * 'a exp * 'a exp * 'a)
+  | Let of (vardecl * 'a exp * 'a exp * 'a)
+  | Fun of (vardecl list * ty * 'a exp * 'a)
+
+and vardecl = name * ty
 
 and name = string
 
@@ -41,6 +44,7 @@ let map_ast f exp =
 let rec string_of_aexp f exp =
   let toS = string_of_aexp f in
   let fmt2 tag l r a = tag ^ " (" ^ toS l ^ ", " ^ toS r ^ ") : " ^ f a in
+  let string_of_vardecl (n, t) = n ^ " : " ^ string_of_ty t in
   match exp with
   | BoolLit (b, a) -> "BoolLit " ^ string_of_bool b ^ " : " ^ f a
   | IntLit (i, a) -> "IntLit " ^ string_of_int i ^ " : " ^ f a
@@ -59,8 +63,11 @@ let rec string_of_aexp f exp =
   | Gte (e1, e2, a) -> fmt2 "Gte" e1 e2 a
   | IfElse (cond, ift, iff, a) ->
     "IfElse (" ^ toS cond ^ ", " ^ toS ift ^ ", " ^ toS iff ^ ") : " ^ f a
-  | Let (n, _, e, b, a) ->
+  | Let ((n, _), e, b, a) ->
     "Let (" ^ n ^ ", " ^ toS e ^ ", " ^ toS b ^ ") : " ^ f a
+  | Fun (ns, t, b, a) ->
+    "Fun ([" ^ (String.concat ", " @@ List.map string_of_vardecl ns) ^ "]"
+    ^ ", " ^ toS b ^ ") : " ^ f a
 
 
 exception TypeError of string
@@ -72,7 +79,8 @@ let tyOf = function
   | Not (_, a) -> a
   | Equals (_, _, a) -> a
   | Lt (_, _, a) | Lte (_, _, a) | Gt (_, _, a) | Gte (_, _, a) -> a
-  | IfElse (_, _, _, a) | Let (_, _, _, _, a) -> a
+  | IfElse (_, _, _, a) | Let (_, _, _, a) -> a
+  | Fun (_, _, _, a) -> a
 
 let tyMismatch what exp act =
   raise @@ TypeError ("Type mismatch in " ^ what ^ ": expected "
@@ -120,8 +128,13 @@ let rec typecheck varenv exp =
       (match (tyOf tift, tyOf tiff) with
       | (t1, t2) when t1=t2 -> IfElse (tcond, tift, tiff, tyOf tift)
       | (t1, t2) -> tyMismatch "if" t1 t2)
-  | Let (n, t, e, b, a) ->
+  | Let ((n, t), e, b, a) ->
       let te = typecheck varenv e in
       if t <> tyOf te then tyMismatch "let" t (tyOf te);
       let tb = typecheck ((n, tyOf te)::varenv) b in
-      Let (n, t, te, tb, tyOf tb)
+      Let ((n, t), te, tb, tyOf tb)
+  | Fun (formals, ty, body, a) ->
+      let varenv' = formals @ varenv in
+      let tbody = typecheck varenv' body in
+      if tyOf tbody <> ty then tyMismatch "fun" ty (tyOf tbody);
+      Fun (formals, ty, tbody, ty)

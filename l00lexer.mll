@@ -30,14 +30,15 @@ rule token = parse
 | "/"             { ODivide }
 | "="             { OEquals }
 | ":"             { OColon }
+| ","             { OComma }
 | "<>"            { ONotEquals }
 | "<"             { OLt }
 | ">"             { OGt }
 | "<="            { OLte }
 | ">="            { OGte }
+| "fun"           { KFun }
 
 (*
-| "fun"           { KFunction }
 | "nil"           { KNil }
 | "type"          { KType }
 *)
