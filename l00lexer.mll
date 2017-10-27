@@ -24,7 +24,7 @@ rule token = parse
 | ['A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as ident
                   { Ident ident}
 | ['a'-'z' '_']+ as atom
-                  { Atom atom }
+                  { TAtom atom }
 (*
 | "/*"            { KCommentStart }
 | "*/"            { KCommentEnd }

@@ -10,7 +10,7 @@
 %token KLet KIn
 %token<int> TInt
 %token<bool> TBool
-%token<string> Atom
+%token<string> TAtom
 %token<string> Ident
 %left OPlus OMinus /* lowest precedence */
 %left OTimes ODivide /* mid-level precedence */
@@ -35,8 +35,8 @@ exp:
 | OMinus exp %prec OUminus         { L02ast.(Minus(IntLit (0, ()), $2, ())) }
 | KIf exp KThen exp KElse exp KEnd { L02ast.IfElse($2, $4, $6, ()) }
 | KIf exp KThen exp KEnd           { L02ast.(IfElse($2, $4, UnitLit (), ())) }
-| Atom                             { L02ast.Atom ($1, ()) }
-| Ident                            { L02ast.Var ($1, ()) }
+| TAtom                            { L02ast.AtomLit($1, ()) }
+| Ident                            { L02ast.Var($1, ()) }
 | letexp                           { $1 }
 ;
 
