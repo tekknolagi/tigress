@@ -109,6 +109,10 @@ let rec typecheck varenv exp =
   | Lte (e1, e2, a) -> Lte (checkRel "<" e1 e2 a)
   | Gt (e1, e2, a) -> Gt (checkRel "<" e1 e2 a)
   | Gte (e1, e2, a) -> Gte (checkRel "<" e1 e2 a)
+  | Equals (e1, e2, a) ->
+      let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
+      if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
+      Equals (t1, t2, BoolTy)
   | IfElse (cond, ift, iff, a) ->
       let tcond = typecheck varenv cond in
       if tyOf tcond <> BoolTy then tyMismatch "if" BoolTy (tyOf tcond);
