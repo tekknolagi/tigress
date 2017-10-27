@@ -1,10 +1,11 @@
 %{
   (* header *)
+  open Types
 %}
 
 %token EOL
 %token OPlus OMinus OTimes ODivide
-%token OEquals
+%token OEquals OColon
 %token OOpenParen OClosedParen
 %token KIf KThen KElse KEnd
 %token KLet KIn
@@ -12,6 +13,7 @@
 %token<bool> TBool
 %token<string> TAtom
 %token<string> Ident
+%token<Types.ty> Ty
 %left OPlus OMinus /* lowest precedence */
 %left OTimes ODivide /* mid-level precedence */
 %nonassoc OUminus /* highest precedence */
@@ -53,7 +55,11 @@ unitlit:
 ;
 
 letexp:
-| KLet Ident OEquals exp KIn exp KEnd    { L02ast.(Let($2, $4, $6, ())) }
+| KLet Ident OColon ty OEquals exp KIn exp KEnd
+      { L02ast.(Let($2, $4, $6, $8, ())) }
 ;
+
+ty:
+| Ty    { $1 }
 
 %%

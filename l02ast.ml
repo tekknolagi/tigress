@@ -1,3 +1,5 @@
+open Types
+
 type 'a exp =
   | BoolLit of (bool * 'a)
   | IntLit of (int * 'a)
@@ -9,21 +11,9 @@ type 'a exp =
   | Times of ('a exp * 'a exp * 'a)
   | Divide of ('a exp * 'a exp * 'a)
   | IfElse of ('a exp * 'a exp * 'a exp * 'a)
-  | Let of (name * 'a exp * 'a exp * 'a)
+  | Let of (name * ty * 'a exp * 'a exp * 'a)
 
 and name = string
-
-type ty =
-  | BoolTy
-  | IntTy
-  | UnitTy
-  | AtomTy
-
-let string_of_ty = function
-  | BoolTy -> "Bool"
-  | IntTy -> "Int"
-  | UnitTy -> "Unit"
-  | AtomTy -> "Atom"
 
 (*
 let default_mapper mapper exp =
@@ -53,7 +43,8 @@ let rec string_of_exp exp =
   | Divide (e1, e2, _) -> "Divide (" ^ toS e1 ^ ", " ^ toS e2 ^ ")"
   | IfElse (cond, ift, iff, _) ->
     "IfElse (" ^ toS cond ^ ", " ^ toS ift ^ ", " ^ toS iff ^ ")"
-  | Let (n, e, b, _) -> "Let (" ^ n ^ ", " ^ toS e ^ ", " ^ toS b ^ ")"
+  | Let (n, t, e, b, _) -> "Let (" ^ n ^ " : " ^ string_of_ty t
+    ^ ", " ^ toS e ^ ", " ^ toS b ^ ")"
 
 let rec string_of_aexp f exp =
   let toS = string_of_aexp f in
@@ -69,7 +60,7 @@ let rec string_of_aexp f exp =
   | Divide (e1, e2, a) -> "Divide (" ^ toS e1 ^ ", " ^ toS e2 ^ ") : " ^ f a
   | IfElse (cond, ift, iff, a) ->
     "IfElse (" ^ toS cond ^ ", " ^ toS ift ^ ", " ^ toS iff ^ ") : " ^ f a
-  | Let (n, e, b, a) ->
+  | Let (n, _, e, b, a) ->
     "Let (" ^ n ^ ", " ^ toS e ^ ", " ^ toS b ^ ") : " ^ f a
 
 
@@ -79,7 +70,7 @@ let tyOf = function
   | BoolLit (_, a) | IntLit (_, a) | AtomLit (_, a) | Var (_, a) -> a
   | UnitLit a -> a
   | Plus (_, _, a) | Minus (_, _, a) | Times (_, _, a) | Divide (_, _, a) -> a
-  | IfElse (_, _, _, a) | Let (_, _, _, a) -> a
+  | IfElse (_, _, _, a) | Let (_, _, _, _, a) -> a
 
 let tyMismatch what exp act =
   raise @@ TypeError ("Type mismatch in " ^ what ^ ": expected "
@@ -118,7 +109,8 @@ let rec typecheck varenv = function
       (match (tyOf tift, tyOf tiff) with
       | (t1, t2) when t1=t2 -> IfElse (tcond, tift, tiff, tyOf tift)
       | (t1, t2) -> tyMismatch "if" t1 t2)
-  | Let (n, e, b, a) ->
+  | Let (n, t, e, b, a) ->
       let te = typecheck varenv e in
+      if t <> tyOf te then tyMismatch "let" t (tyOf te);
       let tb = typecheck ((n, tyOf te)::varenv) b in
-      Let (n, te, tb, tyOf tb)
+      Let (n, t, te, tb, tyOf tb)

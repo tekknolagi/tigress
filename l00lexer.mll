@@ -1,5 +1,6 @@
 {
   open L01parser
+  open Types
   exception Eof
 }
 
@@ -14,6 +15,12 @@ rule token = parse
 | "end"           { KEnd }
 | "let"           { KLet }
 | "in"            { KIn }
+
+| "Bool"          { Ty BoolTy }
+| "Int"           { Ty IntTy }
+| "Atom"          { Ty AtomTy }
+| "Unit"          { Ty UnitTy }
+
 (*
 | "fun"           { KFunction }
 | "nil"           { KNil }
@@ -36,6 +43,7 @@ rule token = parse
 | "*"             { OTimes }
 | "/"             { ODivide }
 | "="             { OEquals }
+| ":"             { OColon }
 (*
 | "<>"            { ONotEquals }
 | "<"             { OLt }
