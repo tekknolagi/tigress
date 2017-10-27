@@ -21,6 +21,21 @@ rule token = parse
 | "Atom"          { Ty AtomTy }
 | "Unit"          { Ty UnitTy }
 
+| "not"           { ONot }
+| "("             { OOpenParen }
+| ")"             { OClosedParen }
+| "+"             { OPlus }
+| "-"             { OMinus }
+| "*"             { OTimes }
+| "/"             { ODivide }
+| "="             { OEquals }
+| ":"             { OColon }
+| "<>"            { ONotEquals }
+| "<"             { OLt }
+| ">"             { OGt }
+| "<="            { OLte }
+| ">="            { OGte }
+
 (*
 | "fun"           { KFunction }
 | "nil"           { KNil }
@@ -36,20 +51,7 @@ rule token = parse
 | "/*"            { KCommentStart }
 | "*/"            { KCommentEnd }
 *)
-| "("             { OOpenParen }
-| ")"             { OClosedParen }
-| "+"             { OPlus }
-| "-"             { OMinus }
-| "*"             { OTimes }
-| "/"             { ODivide }
-| "="             { OEquals }
-| ":"             { OColon }
 (*
-| "<>"            { ONotEquals }
-| "<"             { OLt }
-| ">"             { OGt }
-| "<="            { OLte }
-| ">="            { OGte }
 | "&"             { OLogAnd }
 | "|"             { OLogOr }
 *)
