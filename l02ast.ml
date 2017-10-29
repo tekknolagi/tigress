@@ -87,13 +87,13 @@ let tyMismatch what exp act =
   ^ string_of_ty exp ^ ", but got " ^ string_of_ty act ^ " instead")
 
 let rec typecheck varenv exp =
-  let checkMath what e1 e2 a =
+  let checkMath what e1 e2 =
       let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
       (match (tyOf t1, tyOf t2) with
       | (IntTy, IntTy) -> (t1, t2, IntTy)
       | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch what IntTy q)
   in
-  let checkRel what e1 e2 a =
+  let checkRel what e1 e2 =
       let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
       (match (tyOf t1, tyOf t2) with
       | (IntTy, IntTy) -> (t1, t2, BoolTy)
@@ -105,18 +105,18 @@ let rec typecheck varenv exp =
   | UnitLit a -> UnitLit UnitTy
   | AtomLit (at, a) -> AtomLit (at, AtomTy)
   | Var (n, a) -> Var (n, List.assoc n varenv)
-  | Plus (e1, e2, a) -> Plus (checkMath "+" e1 e2 a)
-  | Minus (e1, e2, a) -> Minus (checkMath "-" e1 e2 a)
-  | Times (e1, e2, a) -> Times (checkMath "*" e1 e2 a)
-  | Divide (e1, e2, a) -> Divide (checkMath "/" e1 e2 a)
+  | Plus (e1, e2, a) -> Plus (checkMath "+" e1 e2)
+  | Minus (e1, e2, a) -> Minus (checkMath "-" e1 e2)
+  | Times (e1, e2, a) -> Times (checkMath "*" e1 e2)
+  | Divide (e1, e2, a) -> Divide (checkMath "/" e1 e2)
   | Not (e, a) ->
       let te = typecheck varenv e in
       if tyOf te <> BoolTy then tyMismatch "not" BoolTy (tyOf te);
       Not (te, BoolTy)
-  | Lt (e1, e2, a) -> Lt (checkRel "<" e1 e2 a)
-  | Lte (e1, e2, a) -> Lte (checkRel "<" e1 e2 a)
-  | Gt (e1, e2, a) -> Gt (checkRel "<" e1 e2 a)
-  | Gte (e1, e2, a) -> Gte (checkRel "<" e1 e2 a)
+  | Lt (e1, e2, a) -> Lt (checkRel "<" e1 e2)
+  | Lte (e1, e2, a) -> Lte (checkRel "<" e1 e2)
+  | Gt (e1, e2, a) -> Gt (checkRel "<" e1 e2)
+  | Gte (e1, e2, a) -> Gte (checkRel "<" e1 e2)
   | Equals (e1, e2, a) ->
       let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
       if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
