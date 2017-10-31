@@ -111,7 +111,7 @@ let rec typecheck varenv exp =
   | Times (e1, e2, a) -> Times (checkMath "*" e1 e2)
   | Divide (e1, e2, a) -> Divide (checkMath "/" e1 e2)
   | Not (e, a) ->
-      let te = typecheck varenv e in
+      let te = ty e in
       if tyOf te <> BoolTy then tyMismatch "not" BoolTy (tyOf te);
       Not (te, BoolTy)
   | Lt (e1, e2, a) -> Lt (checkRel "<" e1 e2)
