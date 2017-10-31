@@ -80,21 +80,22 @@ let tyOf = function
   | Equals (_, _, a) -> a
   | Lt (_, _, a) | Lte (_, _, a) | Gt (_, _, a) | Gte (_, _, a) -> a
   | IfElse (_, _, _, a) | Let (_, _, _, a) -> a
-  | Fun (_, _, _, a) -> a
+  | Fun (_, _, _, a) -> a | App (_, _, a) -> a
 
 let tyMismatch what exp act =
   raise @@ TypeError ("Type mismatch in " ^ what ^ ": expected "
   ^ string_of_ty exp ^ ", but got " ^ string_of_ty act ^ " instead")
 
 let rec typecheck varenv exp =
+  let ty = typecheck varenv in
   let checkMath what e1 e2 =
-      let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
+      let (t1, t2) = (ty e1, ty e2) in
       (match (tyOf t1, tyOf t2) with
       | (IntTy, IntTy) -> (t1, t2, IntTy)
       | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch what IntTy q)
   in
   let checkRel what e1 e2 =
-      let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
+      let (t1, t2) = (ty e1, ty e2) in
       (match (tyOf t1, tyOf t2) with
       | (IntTy, IntTy) -> (t1, t2, BoolTy)
       | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch what IntTy q)
@@ -118,17 +119,17 @@ let rec typecheck varenv exp =
   | Gt (e1, e2, a) -> Gt (checkRel "<" e1 e2)
   | Gte (e1, e2, a) -> Gte (checkRel "<" e1 e2)
   | Equals (e1, e2, a) ->
-      let (t1, t2) = (typecheck varenv e1, typecheck varenv e2) in
+      let (t1, t2) = (ty e1, ty e2) in
       if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
       Equals (t1, t2, BoolTy)
   | IfElse (cond, ift, iff, a) ->
-      let tcond = typecheck varenv cond in
+      let tcond = ty cond in
       if tyOf tcond <> BoolTy then tyMismatch "if" BoolTy (tyOf tcond);
-      let (tift, tiff) = (typecheck varenv ift, typecheck varenv iff) in
+      let (tift, tiff) = (ty ift, ty iff) in
       if tyOf tift <> tyOf tiff then tyMismatch "if" (tyOf tift) (tyOf tiff);
       IfElse (tcond, tift, tiff, tyOf tift)
   | Let ((n, t), e, b, a) ->
-      let te = typecheck varenv e in
+      let te = ty e in
       if t <> tyOf te then tyMismatch "let" t (tyOf te);
       let tb = typecheck ((n, tyOf te)::varenv) b in
       Let ((n, t), te, tb, tyOf tb)
