@@ -125,9 +125,8 @@ let rec typecheck varenv exp =
       let tcond = typecheck varenv cond in
       if tyOf tcond <> BoolTy then tyMismatch "if" BoolTy (tyOf tcond);
       let (tift, tiff) = (typecheck varenv ift, typecheck varenv iff) in
-      (match (tyOf tift, tyOf tiff) with
-      | (t1, t2) when t1=t2 -> IfElse (tcond, tift, tiff, tyOf tift)
-      | (t1, t2) -> tyMismatch "if" t1 t2)
+      if tyOf tift <> tyOf tiff then tyMismatch "if" (tyOf tift) (tyOf tiff);
+      IfElse (tcond, tift, tiff, tyOf tift)
   | Let ((n, t), e, b, a) ->
       let te = typecheck varenv e in
       if t <> tyOf te then tyMismatch "let" t (tyOf te);
