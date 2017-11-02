@@ -1,6 +1,12 @@
 %{
   (* header *)
   open Types
+
+  exception ShouldNotHappen of string
+  let tyOfFun = function
+    | L02ast.Fun(formals, retTy, _, _) ->
+        FunTy (List.map snd formals, retTy)
+    | _ -> raise @@ ShouldNotHappen "Not given fun"
 %}
 
 %token EOL
@@ -50,7 +56,8 @@ exp:
 | KIf exp KThen exp KElse exp KEnd { L02ast.IfElse($2, $4, $6, ()) }
 | KIf exp KThen exp KEnd           { L02ast.(IfElse($2, $4, UnitLit (), ())) }
 | TAtom                            { L02ast.AtomLit($1, ()) }
-| Ident                            { L02ast.Var($1, ()) }
+| var
+| appexp
 | funexp
 | letexp                           { $1 }
 ;
@@ -70,17 +77,29 @@ unitlit:
 vardecl:
 | Ident OColon ty   { ($1, $3) }
 
+var:
+| Ident                            { L02ast.Var($1, ()) }
+;
+
+appexp:
+| var OOpenParen separated_list(OComma, exp) OClosedParen
+    { L02ast.App($1, $3, ()) }
+
 funexp:
-| KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty OEquals exp KEnd
+| KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty OEquals exp
     { L02ast.Fun($3, $6, $8, ()) }
 ;
 
 letexp:
 | KLet vardecl OEquals exp KIn exp KEnd
       { L02ast.(Let($2, $4, $6, ())) }
+| KLet Ident OEquals funexp KIn exp KEnd
+      { let ty = tyOfFun $4 in
+        L02ast.(Let(($2, ty), $4, $6, ())) }
 ;
 
 ty:
 | Ty    { $1 }
+;
 
 %%

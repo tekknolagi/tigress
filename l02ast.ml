@@ -21,25 +21,12 @@ type 'a exp =
 
   | IfElse of ('a exp * 'a exp * 'a exp * 'a)
   | Let of (vardecl * 'a exp * 'a exp * 'a)
+
   | Fun of (vardecl list * ty * 'a exp * 'a)
+  | App of ('a exp * 'a exp list * 'a)
 
 and vardecl = name * ty
-
 and name = string
-
-(*
-let default_mapper mapper exp =
-  exp
-
-let f mapper exp =
-  match exp with
-  | IntLit (i, a) -> IntLit (i*2, a)
-  | _ -> exp
-
-let map_ast f exp =
-  match exp with
-  | BoolLit (b, a) -> 
-      *)
 
 let rec string_of_aexp f exp =
   let toS = string_of_aexp f in
