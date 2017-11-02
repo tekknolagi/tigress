@@ -68,11 +68,14 @@ let rec string_of_aexp f exp =
   | Fun (ns, t, b, a) ->
     "Fun ([" ^ (String.concat ", " @@ List.map string_of_vardecl ns) ^ "]"
     ^ ", " ^ toS b ^ ") : " ^ f a
+  | App (fe, es, a) ->
+    "App (" ^ toS fe ^ ", [" ^ (String.concat ", " @@ List.map toS es) ^ "]"
+    ^ ") : " ^ f a
 
 
 exception TypeError of string
 
-let tyOf = function
+let tyOf : 'a exp -> 'a = function
   | BoolLit (_, a) | IntLit (_, a) | AtomLit (_, a) | Var (_, a) -> a
   | UnitLit a -> a
   | Plus (_, _, a) | Minus (_, _, a) | Times (_, _, a) | Divide (_, _, a) -> a
@@ -82,11 +85,11 @@ let tyOf = function
   | IfElse (_, _, _, a) | Let (_, _, _, a) -> a
   | Fun (_, _, _, a) -> a | App (_, _, a) -> a
 
-let tyMismatch what exp act =
+let tyMismatch : string -> ty -> ty -> 'a = fun what exp act ->
   raise @@ TypeError ("Type mismatch in " ^ what ^ ": expected "
   ^ string_of_ty exp ^ ", but got " ^ string_of_ty act ^ " instead")
 
-let rec typecheck varenv exp =
+let rec typecheck varenv (exp : 'a exp) =
   let ty = typecheck varenv in
   let checkMath what e1 e2 =
       let (t1, t2) = (ty e1, ty e2) in
@@ -101,40 +104,51 @@ let rec typecheck varenv exp =
       | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch what IntTy q)
   in
   match exp with
-  | BoolLit (b, a) -> BoolLit (b, BoolTy)
-  | IntLit (i, a) -> IntLit (i, IntTy)
-  | UnitLit a -> UnitLit UnitTy
-  | AtomLit (at, a) -> AtomLit (at, AtomTy)
-  | Var (n, a) -> Var (n, List.assoc n varenv)
-  | Plus (e1, e2, a) -> Plus (checkMath "+" e1 e2)
-  | Minus (e1, e2, a) -> Minus (checkMath "-" e1 e2)
-  | Times (e1, e2, a) -> Times (checkMath "*" e1 e2)
-  | Divide (e1, e2, a) -> Divide (checkMath "/" e1 e2)
-  | Not (e, a) ->
+  | BoolLit (b, _) -> BoolLit (b, BoolTy)
+  | IntLit (i, _) -> IntLit (i, IntTy)
+  | UnitLit _ -> UnitLit UnitTy
+  | AtomLit (at, _) -> AtomLit (at, AtomTy)
+  | Var (n, _) -> Var (n, List.assoc n varenv)
+  | Plus (e1, e2, _) -> Plus (checkMath "+" e1 e2)
+  | Minus (e1, e2, _) -> Minus (checkMath "-" e1 e2)
+  | Times (e1, e2, _) -> Times (checkMath "*" e1 e2)
+  | Divide (e1, e2, _) -> Divide (checkMath "/" e1 e2)
+  | Not (e, _) ->
       let te = ty e in
       if tyOf te <> BoolTy then tyMismatch "not" BoolTy (tyOf te);
       Not (te, BoolTy)
-  | Lt (e1, e2, a) -> Lt (checkRel "<" e1 e2)
-  | Lte (e1, e2, a) -> Lte (checkRel "<" e1 e2)
-  | Gt (e1, e2, a) -> Gt (checkRel "<" e1 e2)
-  | Gte (e1, e2, a) -> Gte (checkRel "<" e1 e2)
-  | Equals (e1, e2, a) ->
+  | Lt (e1, e2, _) -> Lt (checkRel "<" e1 e2)
+  | Lte (e1, e2, _) -> Lte (checkRel "<" e1 e2)
+  | Gt (e1, e2, _) -> Gt (checkRel "<" e1 e2)
+  | Gte (e1, e2, _) -> Gte (checkRel "<" e1 e2)
+  | Equals (e1, e2, _) ->
       let (t1, t2) = (ty e1, ty e2) in
       if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
       Equals (t1, t2, BoolTy)
-  | IfElse (cond, ift, iff, a) ->
+  | IfElse (cond, ift, iff, _) ->
       let tcond = ty cond in
       if tyOf tcond <> BoolTy then tyMismatch "if" BoolTy (tyOf tcond);
       let (tift, tiff) = (ty ift, ty iff) in
       if tyOf tift <> tyOf tiff then tyMismatch "if" (tyOf tift) (tyOf tiff);
       IfElse (tcond, tift, tiff, tyOf tift)
-  | Let ((n, t), e, b, a) ->
+  | Let ((n, t), e, b, _) ->
       let te = ty e in
       if t <> tyOf te then tyMismatch "let" t (tyOf te);
       let tb = typecheck ((n, tyOf te)::varenv) b in
       Let ((n, t), te, tb, tyOf tb)
-  | Fun (formals, ty, body, a) ->
+  | Fun (formals, ty, body, _) ->
+      let tyFormals = List.map snd formals in
       let varenv' = formals @ varenv in
       let tbody = typecheck varenv' body in
       if tyOf tbody <> ty then tyMismatch "fun" ty (tyOf tbody);
-      Fun (formals, ty, tbody, ty)
+      Fun (formals, ty, tbody, FunTy (tyFormals, ty))
+  | App (f, actuals, _) ->
+      let tyActuals = List.map ty actuals in
+      let ts_actuals = List.map tyOf tyActuals in
+      let typed_f = ty f in
+      (match tyOf typed_f with
+      | FunTy (ts_formals, retTy) ->
+          if ts_actuals <> ts_formals
+          then tyMismatch "apply" (tyOf typed_f) (FunTy (ts_actuals, retTy))
+          else App (typed_f, tyActuals, retTy)
+      | _ -> raise @@ TypeError "non-function applied to arguments")
