@@ -84,6 +84,8 @@ var:
 appexp:
 | var OOpenParen separated_list(OComma, exp) OClosedParen
     { L02ast.App($1, $3, ()) }
+| OOpenParen exp OClosedParen OOpenParen separated_list(OComma, exp) OClosedParen
+    { L02ast.App($2, $5, ()) }
 
 funexp:
 | KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty OEquals exp
