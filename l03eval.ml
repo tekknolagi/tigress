@@ -52,4 +52,12 @@ let rec eval varenv (exp : ty L02ast.exp) =
         (match (ev e1, ev e2) with
         | (v1, v2) -> BoolVal (v1=v2)
         | _ -> raise @@ BugInTypeChecking "Equals")
+    | IfElse (cond, iftrue, iffalse, _) ->
+        (match ev cond with
+        | BoolVal true -> ev iftrue
+        | BoolVal false -> ev iffalse
+        | _ -> raise @@ BugInTypeChecking "IfElse")
+    | Let ((n, _), e, b, _) ->
+        let varenv' = (n, ev e)::varenv in
+        eval varenv' b
   in ev exp
