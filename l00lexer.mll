@@ -37,6 +37,7 @@ rule token = parse
 | "<="            { OLte }
 | ">="            { OGte }
 | "fun"           { KFun }
+| "\\"            { KLam }
 
 (*
 | "nil"           { KNil }

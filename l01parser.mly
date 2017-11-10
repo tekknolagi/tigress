@@ -15,7 +15,7 @@
 %token OEquals OColon OComma
 %token OOpenParen OClosedParen
 %token KIf KThen KElse KEnd
-%token KLet KIn KFun
+%token KLet KIn KFun KLam
 %token<int> TInt
 %token<bool> TBool
 %token<string> TAtom
@@ -88,7 +88,10 @@ appexp:
     { L02ast.App($2, $5, ()) }
 
 funexp:
-| KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty OEquals exp
+| KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty
+OEquals exp KEnd
+| KLam OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty
+OEquals exp KEnd
     { L02ast.Fun($3, $6, $8, ()) }
 ;
 
