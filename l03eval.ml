@@ -1,9 +1,7 @@
-open Types
-
 exception BugInTypeChecking of string
 exception DivByZero
 
-let rec eval varenv (exp : ty L02ast.exp) =
+let rec eval varenv (exp : Types.ty L02ast.exp) =
   let open L02ast in
   let rec ev = function
     | BoolLit (b, _) -> BoolVal b
@@ -48,10 +46,7 @@ let rec eval varenv (exp : ty L02ast.exp) =
         (match (ev e1, ev e2) with
         | (IntVal v1, IntVal v2) -> BoolVal (v1 >= v2)
         | _ -> raise @@ BugInTypeChecking "Gte")
-    | Equals (e1, e2, _) ->
-        (match (ev e1, ev e2) with
-        | (v1, v2) -> BoolVal (v1=v2)
-        | _ -> raise @@ BugInTypeChecking "Equals")
+    | Equals (e1, e2, _) -> BoolVal ((ev e1)=(ev e2))
     | IfElse (cond, iftrue, iffalse, _) ->
         (match ev cond with
         | BoolVal true -> ev iftrue
@@ -60,4 +55,13 @@ let rec eval varenv (exp : ty L02ast.exp) =
     | Let ((n, _), e, b, _) ->
         let varenv' = (n, ev e)::varenv in
         eval varenv' b
+    (* TODO: handle recursion and stuff *)
+    | Fun (formals, _, body, _) -> ClosureVal (List.map fst formals, body)
+    | App (f, actuals, _) ->
+        let actualsv = List.map ev actuals in
+        (match ev f with
+        | ClosureVal (formals, body) ->
+            let varenv' = (List.combine formals actualsv) @ varenv in
+            eval varenv' body
+        | _ -> raise @@ BugInTypeChecking "App")
   in ev exp

@@ -28,6 +28,19 @@ type 'a exp =
 and vardecl = name * ty
 and name = string
 
+and value =
+  | BoolVal of bool
+  | IntVal of int
+  | UnitVal
+  | AtomVal of string
+  | ClosureVal of (name list * ty exp)
+let string_of_value = function
+  | BoolVal b -> string_of_bool b
+  | IntVal i -> string_of_int i
+  | UnitVal -> "()"
+  | AtomVal a -> a
+  | ClosureVal _ -> "(closure)"
+
 let rec string_of_aexp f exp =
   let toS = string_of_aexp f in
   let fmt2 tag l r a = tag ^ " (" ^ toS l ^ ", " ^ toS r ^ ") : " ^ f a in
