@@ -7,3 +7,5 @@ let rec string_of_ty = function
   | FunTy (args, ret) ->
       (String.concat ", " @@ List.map string_of_ty args) ^ " -> "
       ^ string_of_ty ret
+
+type 'a env = (string * 'a) list

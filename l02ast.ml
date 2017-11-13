@@ -89,7 +89,7 @@ let tyMismatch : string -> ty -> ty -> 'a = fun what exp act ->
   raise @@ TypeError ("Type mismatch in " ^ what ^ ": expected "
   ^ string_of_ty exp ^ ", but got " ^ string_of_ty act ^ " instead")
 
-let rec typecheck varenv (exp : 'a exp) =
+let rec typecheck varenv (exp : unit exp) : ty exp =
   let ty = typecheck varenv in
   let checkMath what e1 e2 =
       let (t1, t2) = (ty e1, ty e2) in
@@ -152,3 +152,50 @@ let rec typecheck varenv (exp : 'a exp) =
           then tyMismatch "apply" (tyOf typed_f) (FunTy (ts_actuals, retTy))
           else App (typed_f, tyActuals, retTy)
       | _ -> raise @@ TypeError "non-function applied to arguments")
+
+
+
+let gensym =
+  let module Counter = struct
+    type t = { mutable counter : int; base : string }
+    let make s = { counter = 0; base = s }
+    let inc ctr =
+      let c = ctr.counter in
+      ctr.counter <- ctr.counter + 1;
+    c
+    let next ctr = ctr.base ^ string_of_int (inc ctr)
+  end in
+  let symcounter = Counter.make "__var" in
+  (fun () -> Counter.next symcounter)
+
+let rec rename (varenv : string env) (exp : ty exp) : [ `Renamed ] exp =
+  let re = rename varenv in
+  match exp with
+  | BoolLit (b, _) -> BoolLit (b, `Renamed)
+  | IntLit (i, _) -> IntLit (i, `Renamed)
+  | UnitLit _ -> UnitLit `Renamed
+  | AtomLit (a, _) -> AtomLit (a, `Renamed)
+  | Var (n, _) -> Var (List.assoc n varenv, `Renamed)
+  | Plus (e1, e2, _) -> Plus (re e1, re e2, `Renamed)
+  | Minus (e1, e2, _) -> Minus (re e1, re e2, `Renamed)
+  | Times (e1, e2, _) -> Times (re e1, re e2, `Renamed)
+  | Divide (e1, e2, _) -> Divide (re e1, re e2, `Renamed)
+  | Not (e, _) -> Not (re e, `Renamed)
+  | Lt (e1, e2, _) -> Lt (re e1, re e2, `Renamed)
+  | Lte (e1, e2, _) -> Lte (re e1, re e2, `Renamed)
+  | Gt (e1, e2, _) -> Gt (re e1, re e2, `Renamed)
+  | Gte (e1, e2, _) -> Gte (re e1, re e2, `Renamed)
+  | Equals (e1, e2, _) -> Equals (re e1, re e2, `Renamed)
+  | IfElse (cond, ift, iff, _) -> IfElse (re cond, re ift, re iff, `Renamed)
+  | Let ((n, t), e, b, _) ->
+      let reN = gensym () in
+      Let ((reN, t), re e, rename ((n,reN)::varenv) b, `Renamed)
+  | Fun (formals, ty, body, _) ->
+      let (formalNames, formalTypes) = List.split formals in
+      let newFormalNames = List.map (fun _ -> gensym ()) formalNames in
+      let addToVarenv = List.combine formalNames newFormalNames in
+      Fun (List.combine newFormalNames formalTypes,
+           ty,
+           rename (addToVarenv @ varenv) body,
+           `Renamed)
+  | App (f, args, _) -> App (re f, List.map re args, `Renamed)
