@@ -1,4 +1,3 @@
-(* open Types *)
 module A = L02ast
 
 type inst =
@@ -54,7 +53,7 @@ type funrep = Fun of { fundecl : A.vardecl; impl : inst list }
 
 exception Unimplemented
 
-let rec lower : Types.ty A.exp -> tree * inst list * funrep list = function
+let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.BoolLit (true, _) -> (Imm 1, [], [])
   | A.BoolLit (false, _) -> (Imm 0, [], [])
   | A.IntLit (i, _) -> (Imm i, [], [])

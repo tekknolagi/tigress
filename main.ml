@@ -9,12 +9,7 @@ let _ =
         let ast = L01parser.main L00lexer.token lexbuf in
         let tst = L02ast.typecheck basis ast in
         let ren = L02ast.rename [] tst in
-        (
-          print_endline @@ L02ast.string_of_aexp (fun _ -> "R") ren
-        )
-
-        (*
-        let (t, insts, funs) = L03mir.lower tst in
+        let (t, insts, funs) = L03mir.lower ren in
         (
           let treeString = L03mir.string_of_tree t in
           let instructionsString =
@@ -30,7 +25,6 @@ let _ =
           print_endline "----------";
           print_newline ();
         )
-        *)
 
         (*
         let res = L03eval.eval basis tst in

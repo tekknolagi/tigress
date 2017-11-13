@@ -9,3 +9,5 @@ let rec string_of_ty = function
       ^ string_of_ty ret
 
 type 'a env = (string * 'a) list
+
+type renamed = [ `Renamed ]

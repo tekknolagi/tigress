@@ -168,7 +168,7 @@ let gensym =
   let symcounter = Counter.make "__var" in
   (fun () -> Counter.next symcounter)
 
-let rec rename (varenv : string env) (exp : ty exp) : [ `Renamed ] exp =
+let rec rename (varenv : string env) (exp : ty exp) : renamed exp =
   let re = rename varenv in
   match exp with
   | BoolLit (b, _) -> BoolLit (b, `Renamed)
