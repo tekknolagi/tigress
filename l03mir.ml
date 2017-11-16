@@ -16,12 +16,15 @@ and tree =
   | String of string
   | Mem of tree
   | Var of symbol
+  (*         op,   e  *)
+  | Unop of unop * tree
   (*         op,     L,     R    *)
   | Binop of binop * tree * tree
   | Empty
 
-and binop = Plus | Minus | Times | Div
-and cmpop = Eq | Neq | Lt | Gt | Gte
+and unop = Not | Neg
+and binop = Plus | Minus | Times | Divide
+and cmpop = Eq | Neq | Lt | Lte | Gt | Gte
 and symbol = string
 
 let rec string_of_inst = function
@@ -41,15 +44,22 @@ and string_of_tree = function
   | String s -> "@" ^ s
   | Mem t -> "*(" ^ string_of_tree t ^ ")"
   | Var s -> "V:" ^ s
+  | Unop (o, e) -> string_of_unop o ^ "(" ^ string_of_tree e ^ ")"
   | Binop (o, l, r) -> string_of_tree l ^ string_of_binop o ^ string_of_tree r
+and string_of_unop = function | Not -> "!" | Neg -> "-"
 and string_of_cmpop o =
-  " " ^ (function | Eq -> "==" | Neq -> "!=" | Lt -> "<" | Gt -> ">" | Gte -> ">=") o ^ " "
+  " " ^ (function | Eq -> "==" | Neq -> "!=" | Lt -> "<" | Lte -> "<=" | Gt -> ">" | Gte -> ">=") o ^ " "
 and string_of_binop o =
-  " " ^ (function | Plus -> "+" | Minus -> "-" | Times -> "*" | Div -> "/") o ^ " "
+  " " ^ (function | Plus -> "+" | Minus -> "-" | Times -> "*" | Divide -> "/") o ^ " "
 
-type funrep = Fun of { fundecl : A.vardecl; impl : inst list }
+(* -- Representation for a function
+      a FUNDECL and a list of instructions
 
+datatype funrep = FUN of { fundecl: A.decl, impl: inst list }
+*)
 
+type 'a fundecl = symbol * (symbol Types.env) option * symbol option * 'a A.exp
+type funrep = Fun of { fundecl: Types.renamed fundecl; impl : inst list }
 
 exception Unimplemented
 
@@ -64,12 +74,37 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.Plus (l, r, _) ->
       let (expL, insL, funsL) = lower l in
       let (expR, insR, funsR) = lower r in
-      let newTree = Binop (Plus, expL, expR) in
-      (newTree, insL @ insR, funsL @ funsR)
+      (Binop (Plus, expL, expR), insL @ insR, funsL @ funsR)
+  | A.Minus (l, r, _) ->
+      let (expL, insL, funsL) = lower l in
+      let (expR, insR, funsR) = lower r in
+      (Binop (Minus, expL, expR), insL @ insR, funsL @ funsR)
+  | A.Times (l, r, _) ->
+      let (expL, insL, funsL) = lower l in
+      let (expR, insR, funsR) = lower r in
+      (Binop (Times, expL, expR), insL @ insR, funsL @ funsR)
+  | A.Divide (l, r, _) ->
+      let (expL, insL, funsL) = lower l in
+      let (expR, insR, funsR) = lower r in
+      (Binop (Divide, expL, expR), insL @ insR, funsL @ funsR)
+
+  | A.Not (e, _) ->
+      let (loweredE, instsE, funsE) = lower e in
+      (Unop (Not, loweredE), instsE, funsE)
+
+      (*
+  | A.Lt (l, r, _) ->
+      let (expL, insL, funsL) = lower l in
+      let (expR, insR, funsR) = lower r in
+      (Cmp
+      *)
 
   | A.Let ((n, _), e, body, _) ->
       let (expE, insE, funsE) = lower e in
       let (expBody, insBody, funsBody) = lower body in
+      (expBody, insE @ [ Move (Var n, expE) ] @ insBody, funsE @ funsBody)
 
-      let assign = Move (Var n, expE) in
-      (expBody, insE @ [ assign ] @ insBody, funsE @ funsBody)
+      (*
+  | A.Fun (formals, ty, body, _) ->
+      (Empty, 
+      *)
