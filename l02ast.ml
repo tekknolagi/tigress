@@ -139,7 +139,7 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       if tyOf tift <> tyOf tiff then tyMismatch "if" (tyOf tift) (tyOf tiff);
       IfElse (tcond, tift, tiff, tyOf tift)
   (* TODO: cleanup *)
-  | Let ((n, t), (Fun (formals, fret, fbody, _) as e), b, _) as letExp ->
+  | Let ((n, t), (Fun (formals, fret, fbody, _) as e), b, _) ->
       let tyFormals = List.map snd formals in
       let tyN = FunTy (tyFormals, fret) in
       let varenv' = (n,tyN)::varenv in
