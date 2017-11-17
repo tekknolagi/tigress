@@ -143,14 +143,14 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       if tyOf tbody <> ty then tyMismatch "fun" ty (tyOf tbody);
       Fun (formals, ty, tbody, FunTy (tyFormals, ty))
   | App (f, actuals, _) ->
-      let tyActuals = List.map ty actuals in
-      let ts_actuals = List.map tyOf tyActuals in
+      let typedActuals = List.map ty actuals in
+      let typesOfActuals = List.map tyOf typedActuals in
       let typed_f = ty f in
       (match tyOf typed_f with
       | FunTy (ts_formals, retTy) ->
-          if ts_actuals <> ts_formals
-          then tyMismatch "apply" (tyOf typed_f) (FunTy (ts_actuals, retTy))
-          else App (typed_f, tyActuals, retTy)
+          if typesOfActuals <> ts_formals
+          then tyMismatch "apply" (tyOf typed_f) (FunTy (typesOfActuals, retTy))
+          else App (typed_f, typedActuals, retTy)
       | _ -> raise @@ TypeError "non-function applied to arguments")
 
 
