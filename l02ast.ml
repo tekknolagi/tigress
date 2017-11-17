@@ -43,34 +43,35 @@ let string_of_value = function
 
 let rec string_of_aexp f exp =
   let toS = string_of_aexp f in
-  let fmt2 tag l r a = tag ^ " (" ^ toS l ^ ", " ^ toS r ^ ") : " ^ f a in
+  let ann a = let s = f a in if s="" then "" else " : " ^ s in
+  let fmt2 tag l r a = tag ^ " (" ^ toS l ^ ", " ^ toS r ^ ")" ^ ann a in
   let string_of_vardecl (n, t) = n ^ " : " ^ string_of_ty t in
   match exp with
-  | BoolLit (b, a) -> "BoolLit " ^ string_of_bool b ^ " : " ^ f a
-  | IntLit (i, a) -> "IntLit " ^ string_of_int i ^ " : " ^ f a
-  | UnitLit a -> "UnitLit : " ^ f a
-  | AtomLit (at, a) -> "Atom " ^ at ^ " : " ^ f a
-  | Var (n, a) -> "Var " ^ n ^ " : " ^ f a
+  | BoolLit (b, a) -> "BoolLit " ^ string_of_bool b ^ ann a
+  | IntLit (i, a) -> "IntLit " ^ string_of_int i ^ ann a
+  | UnitLit a -> "UnitLit" ^ ann a
+  | AtomLit (at, a) -> "Atom " ^ at ^ ann a
+  | Var (n, a) -> "Var " ^ n ^ ann a
   | Plus (e1, e2, a) -> fmt2 "Plus" e1 e2 a
   | Minus (e1, e2, a) -> fmt2 "Minus" e1 e2 a
   | Times (e1, e2, a) -> fmt2 "Times" e1 e2 a
   | Divide (e1, e2, a) -> fmt2 "Divide" e1 e2 a
-  | Not (e, a) -> "Not " ^ toS e ^ " : " ^ f a
+  | Not (e, a) -> "Not " ^ toS e ^ ann a
   | Equals (e1, e2, a) -> fmt2 "Equals" e1 e2 a
   | Lt (e1, e2, a) -> fmt2 "Lt" e1 e2 a
   | Lte (e1, e2, a) -> fmt2 "Lte" e1 e2 a
   | Gt (e1, e2, a) -> fmt2 "Gt" e1 e2 a
   | Gte (e1, e2, a) -> fmt2 "Gte" e1 e2 a
   | IfElse (cond, ift, iff, a) ->
-    "IfElse (" ^ toS cond ^ ", " ^ toS ift ^ ", " ^ toS iff ^ ") : " ^ f a
+    "IfElse (" ^ toS cond ^ ", " ^ toS ift ^ ", " ^ toS iff ^ ")" ^ ann a
   | Let ((n, _), e, b, a) ->
-    "Let (" ^ n ^ ", " ^ toS e ^ ", " ^ toS b ^ ") : " ^ f a
+    "Let (" ^ n ^ ", " ^ toS e ^ ", " ^ toS b ^ ")" ^ ann a
   | Fun (ns, t, b, a) ->
     "Fun ([" ^ (String.concat ", " @@ List.map string_of_vardecl ns) ^ "]"
-    ^ ", " ^ toS b ^ ") : " ^ f a
+    ^ ", " ^ toS b ^ ")" ^ ann a
   | App (fe, es, a) ->
     "App (" ^ toS fe ^ ", [" ^ (String.concat ", " @@ List.map toS es) ^ "]"
-    ^ ") : " ^ f a
+    ^ ")" ^ ann a
 
 
 exception TypeError of string
@@ -108,7 +109,13 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
   | IntLit (i, _) -> IntLit (i, IntTy)
   | UnitLit _ -> UnitLit UnitTy
   | AtomLit (at, _) -> AtomLit (at, AtomTy)
-  | Var (n, _) -> Var (n, List.assoc n varenv)
+  | Var (n, _) ->
+      let tyN =
+        try List.assoc n varenv
+        with Not_found ->
+          raise @@ TypeError ("Could not find " ^ n ^ " in tyenv")
+      in
+      Var (n, tyN)
   | Plus (e1, e2, _) -> Plus (checkMath "+" e1 e2)
   | Minus (e1, e2, _) -> Minus (checkMath "-" e1 e2)
   | Times (e1, e2, _) -> Times (checkMath "*" e1 e2)
@@ -131,6 +138,15 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       let (tift, tiff) = (ty ift, ty iff) in
       if tyOf tift <> tyOf tiff then tyMismatch "if" (tyOf tift) (tyOf tiff);
       IfElse (tcond, tift, tiff, tyOf tift)
+  (* TODO: cleanup *)
+  | Let ((n, t), (Fun (formals, fret, fbody, _) as e), b, _) as letExp ->
+      let tyFormals = List.map snd formals in
+      let tyN = FunTy (tyFormals, fret) in
+      let varenv' = (n,tyN)::varenv in
+      let te = typecheck varenv' e in
+      if t <> tyOf te then tyMismatch "let" t (tyOf te);
+      let tb = typecheck ((n, tyOf te)::varenv) b in
+      Let ((n, t), te, tb, tyOf tb)
   | Let ((n, t), e, b, _) ->
       let te = ty e in
       if t <> tyOf te then tyMismatch "let" t (tyOf te);
