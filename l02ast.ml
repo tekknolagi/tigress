@@ -118,9 +118,9 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       if tyOf te <> BoolTy then tyMismatch "not" BoolTy (tyOf te);
       Not (te, BoolTy)
   | Lt (e1, e2, _) -> Lt (checkRel "<" e1 e2)
-  | Lte (e1, e2, _) -> Lte (checkRel "<" e1 e2)
-  | Gt (e1, e2, _) -> Gt (checkRel "<" e1 e2)
-  | Gte (e1, e2, _) -> Gte (checkRel "<" e1 e2)
+  | Lte (e1, e2, _) -> Lte (checkRel "<=" e1 e2)
+  | Gt (e1, e2, _) -> Gt (checkRel ">" e1 e2)
+  | Gte (e1, e2, _) -> Gte (checkRel ">=" e1 e2)
   | Equals (e1, e2, _) ->
       let (t1, t2) = (ty e1, ty e2) in
       if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
