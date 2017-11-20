@@ -7,23 +7,18 @@ type 'a exp =
   | AtomLit of (name * 'a)
   | Var of (name * 'a)
 
-  | Plus of ('a exp * 'a exp * 'a)
-  | Minus of ('a exp * 'a exp * 'a)
-  | Times of ('a exp * 'a exp * 'a)
-  | Divide of ('a exp * 'a exp * 'a)
-
+  | Mathop of (mathop * 'a exp * 'a exp * 'a)
+  | Cmpop of (cmpop * 'a exp * 'a exp * 'a)
   | Not of ('a exp * 'a)
-  | Equals of ('a exp * 'a exp * 'a)
-  | Lt of ('a exp * 'a exp * 'a)
-  | Lte of ('a exp * 'a exp * 'a)
-  | Gt of ('a exp * 'a exp * 'a)
-  | Gte of ('a exp * 'a exp * 'a)
 
   | IfElse of ('a exp * 'a exp * 'a exp * 'a)
   | Let of (vardecl * 'a exp * 'a exp * 'a)
 
   | Fun of (vardecl list * ty * 'a exp * 'a)
   | App of ('a exp * 'a exp list * 'a)
+
+and mathop = Plus | Minus | Times | Divide
+and cmpop = Lt | Lte | Gt | Gte | Equals
 
 and vardecl = name * ty
 and name = string
@@ -46,22 +41,21 @@ let rec string_of_aexp f exp =
   let ann a = let s = f a in if s="" then "" else " : " ^ s in
   let fmt2 tag l r a = tag ^ " (" ^ toS l ^ ", " ^ toS r ^ ")" ^ ann a in
   let string_of_vardecl (n, t) = n ^ " : " ^ string_of_ty t in
+  let string_of_mathop o =
+    List.assoc o [Plus,"Plus"; Minus,"Minus"; Times,"Times"; Divide,"Divide"]
+  in
+  let string_of_cmpop o =
+    List.assoc o [Lt,"Lt"; Lte,"Lte"; Gt,"Gt"; Gte,"Gte"; Equals,"Equals"]
+  in
   match exp with
   | BoolLit (b, a) -> "BoolLit " ^ string_of_bool b ^ ann a
   | IntLit (i, a) -> "IntLit " ^ string_of_int i ^ ann a
   | UnitLit a -> "UnitLit" ^ ann a
   | AtomLit (at, a) -> "Atom " ^ at ^ ann a
   | Var (n, a) -> "Var " ^ n ^ ann a
-  | Plus (e1, e2, a) -> fmt2 "Plus" e1 e2 a
-  | Minus (e1, e2, a) -> fmt2 "Minus" e1 e2 a
-  | Times (e1, e2, a) -> fmt2 "Times" e1 e2 a
-  | Divide (e1, e2, a) -> fmt2 "Divide" e1 e2 a
+  | Mathop (op, e1, e2, a) -> fmt2 (string_of_mathop op) e1 e2 a
+  | Cmpop (op, e1, e2, a) -> fmt2 (string_of_cmpop op) e1 e2 a
   | Not (e, a) -> "Not " ^ toS e ^ ann a
-  | Equals (e1, e2, a) -> fmt2 "Equals" e1 e2 a
-  | Lt (e1, e2, a) -> fmt2 "Lt" e1 e2 a
-  | Lte (e1, e2, a) -> fmt2 "Lte" e1 e2 a
-  | Gt (e1, e2, a) -> fmt2 "Gt" e1 e2 a
-  | Gte (e1, e2, a) -> fmt2 "Gte" e1 e2 a
   | IfElse (cond, ift, iff, a) ->
     "IfElse (" ^ toS cond ^ ", " ^ toS ift ^ ", " ^ toS iff ^ ")" ^ ann a
   | Let ((n, _), e, b, a) ->
@@ -79,10 +73,7 @@ exception TypeError of string
 let tyOf : 'a exp -> 'a = function
   | BoolLit (_, a) | IntLit (_, a) | AtomLit (_, a) | Var (_, a) -> a
   | UnitLit a -> a
-  | Plus (_, _, a) | Minus (_, _, a) | Times (_, _, a) | Divide (_, _, a) -> a
-  | Not (_, a) -> a
-  | Equals (_, _, a) -> a
-  | Lt (_, _, a) | Lte (_, _, a) | Gt (_, _, a) | Gte (_, _, a) -> a
+  | Mathop (_, _, _, a) -> a | Cmpop (_, _, _, a) -> a | Not (_, a) -> a
   | IfElse (_, _, _, a) | Let (_, _, _, a) -> a
   | Fun (_, _, _, a) -> a | App (_, _, a) -> a
 
@@ -92,18 +83,6 @@ let tyMismatch : string -> ty -> ty -> 'a = fun what exp act ->
 
 let rec typecheck varenv (exp : unit exp) : ty exp =
   let ty = typecheck varenv in
-  let checkMath what e1 e2 =
-      let (t1, t2) = (ty e1, ty e2) in
-      (match (tyOf t1, tyOf t2) with
-      | (IntTy, IntTy) -> (t1, t2, IntTy)
-      | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch what IntTy q)
-  in
-  let checkRel what e1 e2 =
-      let (t1, t2) = (ty e1, ty e2) in
-      (match (tyOf t1, tyOf t2) with
-      | (IntTy, IntTy) -> (t1, t2, BoolTy)
-      | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch what IntTy q)
-  in
   match exp with
   | BoolLit (b, _) -> BoolLit (b, BoolTy)
   | IntLit (i, _) -> IntLit (i, IntTy)
@@ -114,24 +93,27 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
         try List.assoc n varenv
         with Not_found ->
           raise @@ TypeError ("Could not find " ^ n ^ " in tyenv")
-      in
-      Var (n, tyN)
-  | Plus (e1, e2, _) -> Plus (checkMath "+" e1 e2)
-  | Minus (e1, e2, _) -> Minus (checkMath "-" e1 e2)
-  | Times (e1, e2, _) -> Times (checkMath "*" e1 e2)
-  | Divide (e1, e2, _) -> Divide (checkMath "/" e1 e2)
+      in Var (n, tyN)
+  | Mathop (op, e1, e2, _) ->
+      let opStr = List.assoc op [Plus,"+"; Minus,"-"; Times,"*"; Divide,"/"] in
+      let (t1, t2) = (ty e1, ty e2) in
+      (match (tyOf t1, tyOf t2) with
+      | (IntTy, IntTy) -> Mathop (op, t1, t2, IntTy)
+      | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch opStr IntTy q)
+  | Cmpop (Equals, e1, e2, _) ->
+      let (t1, t2) = (ty e1, ty e2) in
+      if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
+      Cmpop (Equals, t1, t2, BoolTy)
+  | Cmpop (op, e1, e2, _) ->
+      let opStr = List.assoc op [Lt,"<"; Lte,"<="; Gt,">"; Gte,">="] in
+      let (t1, t2) = (ty e1, ty e2) in
+      (match (tyOf t1, tyOf t2) with
+      | (IntTy, IntTy) -> Cmpop (op, t1, t2, BoolTy)
+      | (IntTy, q) | (q, IntTy) | (q, _) -> tyMismatch opStr IntTy q)
   | Not (e, _) ->
       let te = ty e in
       if tyOf te <> BoolTy then tyMismatch "not" BoolTy (tyOf te);
       Not (te, BoolTy)
-  | Lt (e1, e2, _) -> Lt (checkRel "<" e1 e2)
-  | Lte (e1, e2, _) -> Lte (checkRel "<=" e1 e2)
-  | Gt (e1, e2, _) -> Gt (checkRel ">" e1 e2)
-  | Gte (e1, e2, _) -> Gte (checkRel ">=" e1 e2)
-  | Equals (e1, e2, _) ->
-      let (t1, t2) = (ty e1, ty e2) in
-      if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
-      Equals (t1, t2, BoolTy)
   | IfElse (cond, ift, iff, _) ->
       let tcond = ty cond in
       if tyOf tcond <> BoolTy then tyMismatch "if" BoolTy (tyOf tcond);
@@ -192,16 +174,9 @@ let rec rename (varenv : string env) (exp : ty exp) : renamed exp =
   | UnitLit _ -> UnitLit `Renamed
   | AtomLit (a, _) -> AtomLit (a, `Renamed)
   | Var (n, _) -> Var (List.assoc n varenv, `Renamed)
-  | Plus (e1, e2, _) -> Plus (re e1, re e2, `Renamed)
-  | Minus (e1, e2, _) -> Minus (re e1, re e2, `Renamed)
-  | Times (e1, e2, _) -> Times (re e1, re e2, `Renamed)
-  | Divide (e1, e2, _) -> Divide (re e1, re e2, `Renamed)
+  | Mathop (op, e1, e2, _) -> Mathop (op, re e1, re e2, `Renamed)
+  | Cmpop (op, e1, e2, _) -> Cmpop (op, re e1, re e2, `Renamed)
   | Not (e, _) -> Not (re e, `Renamed)
-  | Lt (e1, e2, _) -> Lt (re e1, re e2, `Renamed)
-  | Lte (e1, e2, _) -> Lte (re e1, re e2, `Renamed)
-  | Gt (e1, e2, _) -> Gt (re e1, re e2, `Renamed)
-  | Gte (e1, e2, _) -> Gte (re e1, re e2, `Renamed)
-  | Equals (e1, e2, _) -> Equals (re e1, re e2, `Renamed)
   | IfElse (cond, ift, iff, _) -> IfElse (re cond, re ift, re iff, `Renamed)
   | Let ((n, t), e, b, _) ->
       let reN = gensym () in

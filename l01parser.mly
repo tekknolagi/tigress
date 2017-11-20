@@ -42,17 +42,17 @@ exp:
 | unitlit                          { $1 }
 | OOpenParen exp OClosedParen      { $2 }
 | ONot exp                         { L02ast.Not ($2, ()) }
-| exp OPlus exp                    { L02ast.Plus($1, $3, ()) }
-| exp OMinus exp                   { L02ast.Minus($1, $3, ()) }
-| exp OTimes exp                   { L02ast.Times($1, $3, ()) }
-| exp ODivide exp                  { L02ast.Divide($1, $3, ()) }
-| exp OEquals exp                  { L02ast.Equals($1, $3, ()) }
-| exp ONotEquals exp               { L02ast.(Not(Equals($1, $3, ()), ())) }
-| exp OLt exp                      { L02ast.Lt($1, $3, ()) }
-| exp OLte exp                     { L02ast.Lte($1, $3, ()) }
-| exp OGt exp                      { L02ast.Gt($1, $3, ()) }
-| exp OGte exp                     { L02ast.Gte($1, $3, ()) }
-| OMinus exp %prec OUminus         { L02ast.(Minus(IntLit (0, ()), $2, ())) }
+| exp OPlus exp                    { L02ast.(Mathop(Plus, $1, $3, ())) }
+| exp OMinus exp                   { L02ast.(Mathop(Minus, $1, $3, ())) }
+| exp OTimes exp                   { L02ast.(Mathop(Times, $1, $3, ())) }
+| exp ODivide exp                  { L02ast.(Mathop(Divide, $1, $3, ())) }
+| exp OEquals exp                  { L02ast.(Cmpop(Equals, $1, $3, ())) }
+| exp ONotEquals exp               { L02ast.((Not(Cmpop(Equals, $1, $3, ()), ()))) }
+| exp OLt exp                      { L02ast.(Cmpop(Lt, $1, $3, ())) }
+| exp OLte exp                     { L02ast.(Cmpop(Lte, $1, $3, ())) }
+| exp OGt exp                      { L02ast.(Cmpop(Gt, $1, $3, ())) }
+| exp OGte exp                     { L02ast.(Cmpop(Gte, $1, $3, ())) }
+| OMinus exp %prec OUminus         { L02ast.(Mathop(Minus, IntLit (0, ()), $2, ())) }
 | KIf exp KThen exp KElse exp KEnd { L02ast.IfElse($2, $4, $6, ()) }
 | KIf exp KThen exp KEnd           { L02ast.(IfElse($2, $4, UnitLit (), ())) }
 | TAtom                            { L02ast.AtomLit($1, ()) }
