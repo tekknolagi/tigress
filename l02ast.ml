@@ -28,13 +28,15 @@ and value =
   | IntVal of int
   | UnitVal
   | AtomVal of string
-  | ClosureVal of (name list * ty exp)
+  | ClosureVal of (name list * ty exp * value ref env)
+  | Unspecified
 let string_of_value = function
   | BoolVal b -> string_of_bool b
   | IntVal i -> string_of_int i
   | UnitVal -> "()"
   | AtomVal a -> a
   | ClosureVal _ -> "(closure)"
+  | Unspecified -> "UNSPECIFIED"
 
 let rec string_of_aexp f exp =
   let toS = string_of_aexp f in
@@ -155,38 +157,54 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
 
 let gensym =
   let module Counter = struct
-    type t = { mutable counter : int; base : string }
-    let make s = { counter = 0; base = s }
+    type t = { mutable counter : int }
+    let make () = { counter = 0 }
     let inc ctr =
       let c = ctr.counter in
       ctr.counter <- ctr.counter + 1;
-    c
-    let next ctr = ctr.base ^ string_of_int (inc ctr)
+      c
+    let next name ctr = (name, inc ctr)
   end in
-  let symcounter = Counter.make "__var" in
-  (fun () -> Counter.next symcounter)
+  let symcounter = Counter.make () in
+  (fun () -> Counter.next "__var" symcounter)
 
-let rec rename (varenv : string env) (exp : ty exp) : renamed exp =
+exception BugInRenaming of string
+type unique_name = name * int
+let string_of_unique_name (n, c) = n ^ string_of_int c
+let rec rename (varenv : unique_name env) (exp : ty exp) : renamed exp =
   let re = rename varenv in
+  let is_being_shadowed = List.mem_assoc in
+  let get_last_counter n h = snd @@ List.assoc n h in
   match exp with
   | BoolLit (b, _) -> BoolLit (b, `Renamed)
   | IntLit (i, _) -> IntLit (i, `Renamed)
   | UnitLit _ -> UnitLit `Renamed
   | AtomLit (a, _) -> AtomLit (a, `Renamed)
-  | Var (n, _) -> Var (List.assoc n varenv, `Renamed)
+  | Var (n, _) ->
+      let foundVariable = List.assoc n varenv in
+      Var (string_of_unique_name foundVariable, `Renamed)
   | Mathop (op, e1, e2, _) -> Mathop (op, re e1, re e2, `Renamed)
   | Cmpop (op, e1, e2, _) -> Cmpop (op, re e1, re e2, `Renamed)
   | Not (e, _) -> Not (re e, `Renamed)
   | IfElse (cond, ift, iff, _) -> IfElse (re cond, re ift, re iff, `Renamed)
   | Let ((n, t), e, b, _) ->
-      let reN = gensym () in
-      Let ((reN, t), re e, rename ((n,reN)::varenv) b, `Renamed)
+      let new_var =
+        if is_being_shadowed n varenv
+        then (n, 1 + get_last_counter n varenv)
+        else (n, 0)
+      in
+      let varenv' = (n, new_var)::varenv in
+      Let ((string_of_unique_name new_var, t), re e, rename varenv' b, `Renamed)
+      (*
   | Fun (formals, ty, body, _) ->
       let (formalNames, formalTypes) = List.split formals in
-      let newFormalNames = List.map (fun _ -> gensym ()) formalNames in
+      let newFormalNames =
+        List.map string_of_unique_name @@
+        List.map (fun _ -> gensym ()) formalNames in
       let addToVarenv = List.combine formalNames newFormalNames in
       Fun (List.combine newFormalNames formalTypes,
            ty,
            rename (addToVarenv @ varenv) body,
            `Renamed)
   | App (f, args, _) -> App (re f, List.map re args, `Renamed)
+  *)
