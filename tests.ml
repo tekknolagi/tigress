@@ -3,15 +3,21 @@ let paren s = "(" ^ s ^ ")"
 
 let i x = L02ast.IntLit (x, ())
 let a x = L02ast.AtomLit (x, ())
+let v x = L02ast.Var (x, ())
 let u = L02ast.UnitLit ()
 
-let expressions = let open L02ast in [
+let expressions =
+  let open L02ast in
+  let open Types in
+[
   "true", BoolLit (true, ());
   "false", BoolLit (false, ());
   "1", i 1;
   "100", i 100;
   "-12", Mathop (Minus, i 0, i 12, ());
+  "- 12", Mathop (Minus, i 0, i 12, ());
   "100+2", Mathop (Plus, i 100, i 2, ());
+  "100 + 2", Mathop (Plus, i 100, i 2, ());
   "100-2", Mathop (Minus, i 100, i 2, ());
   "100*2", Mathop (Times, i 100, i 2, ());
   "100/2", Mathop (Divide, i 100, i 2, ());
@@ -28,8 +34,40 @@ let expressions = let open L02ast in [
   "1<>2", Not (Cmpop (Equals, i 1, i 2, ()), ());
   "if 3 then 4 else 5 end", IfElse (i 3, i 4, i 5, ());
   "if 5 < 6 then 4 else 5 end", IfElse (Cmpop (Lt, i 5, i 6, ()), i 4, i 5, ());
-  "if 5 < 6 then a else b end", IfElse (Cmpop (Lt, i 5, i 6, ()), a "a", a "b", ());
+  "if 5 < 6 then a else b end",
+    IfElse (Cmpop (Lt, i 5, i 6, ()), a "a", a "b", ());
   "if 3 then 4 end", IfElse (i 3, i 4, u, ());
+  "let X : Int = 5 in X end", Let (("X", IntTy), i 5, v "X", ());
+  "let X : Int = 5 in X + 1 end",
+    Let (("X", IntTy), i 5, Mathop (Plus, v "X", i 1, ()), ());
+  "fun (X:Int):Int = X + 1",
+    Fun (["X", IntTy], IntTy, Mathop (Plus, v "X", i 1, ()), ());
+  "\\(X:Int):Int = X + 1",
+    Fun (["X", IntTy], IntTy, Mathop (Plus, v "X", i 1, ()), ());
+  "F(3)", App (v "F", [i 3], ());
+  "(F)(3)", App (v "F", [i 3], ());
+  "(\\(X:Int):Int = X + 1)(3)",
+    App (
+      Fun (["X", IntTy], IntTy, Mathop (Plus, v "X", i 1, ()), ()),
+      [i 3],
+      ());
+  "(\\(X:Int):Int = X + 1)(3, 4)",
+    App (
+      Fun (["X", IntTy], IntTy, Mathop (Plus, v "X", i 1, ()), ()),
+      [i 3; i 4],
+      ());
+  "let F = \\(X:Int):Int = 1 in F(hello) end",
+    Let (
+      ("F", FunTy ([IntTy], IntTy)),
+      Fun (["X", IntTy], IntTy, i 1, ()),
+      App (v "F", [a "hello"], ()),
+      ());
+  "let F : (Int) -> Int = Fact in F end",
+    Let (("F", FunTy ([IntTy], IntTy)), v "Fact", v "F", ());
+  "let F : Int -> Int = Fact in F end",
+    Let (("F", FunTy ([IntTy], IntTy)), v "Fact", v "F", ());
+  "let F : ((Bool * Int) -> Atom) -> Int = Fact in F end",
+    Let (("F", FunTy ([FunTy ([BoolTy; IntTy], AtomTy)], IntTy)), v "Fact", v "F", ());
 ]
 
 let parse_tests =
