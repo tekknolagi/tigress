@@ -4,17 +4,13 @@ let const (type a) (type b) (x : a) (y : b) : a = x
 
 let _ =
   try
+    let basis = [] in
     let lexbuf = Lexing.from_channel stdin in
     while true do
       try
-        let basis = [] in
+        if Unix.(isatty stdin) then ( print_string ">>> "; flush stdout );
         let ast = L01parser.main L00lexer.token lexbuf in
         let tst = L02ast.typecheck basis ast in
-        (*
-        let str = L02ast.string_of_aexp Types.string_of_ty tst in
-        print_endline str; flush stdout;
-        *)
-
         (*
         let ren = L02ast.rename [] tst in
         print_endline @@ L02ast.(string_of_aexp (const "") ren);
@@ -47,7 +43,14 @@ let _ =
         (*
         *)
 
-      with Failure _ -> exit 0
+      with
+      | Failure _ -> exit 0
+      | e ->
+      (
+        print_endline @@ Printexc.to_string e;
+        flush stdout
+      )
+
     done
   with L00lexer.Eof ->
     exit 0

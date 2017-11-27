@@ -94,7 +94,7 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       let tyN =
         try List.assoc n varenv
         with Not_found ->
-          raise @@ TypeError ("Could not find " ^ n ^ " in tyenv")
+          raise @@ TypeError ("Udeclared variable `" ^ n ^ "'")
       in Var (n, tyN)
   | Mathop (op, e1, e2, _) ->
       let opStr = List.assoc op [Plus,"+"; Minus,"-"; Times,"*"; Divide,"/"] in

@@ -38,6 +38,7 @@ main:
 exp:
 | boollit
 | intlit
+| atomlit
 | unitlit                          { $1 }
 | OOpenParen exp OClosedParen      { $2 }
 | ONot exp                         { L02ast.Not ($2, ()) }
@@ -54,7 +55,6 @@ exp:
 | OMinus exp %prec OUminus         { L02ast.(Mathop(Minus, IntLit (0, ()), $2, ())) }
 | KIf exp KThen exp KElse exp KEnd { L02ast.IfElse($2, $4, $6, ()) }
 | KIf exp KThen exp KEnd           { L02ast.(IfElse($2, $4, UnitLit (), ())) }
-| TAtom                            { L02ast.AtomLit($1, ()) }
 | var
 | appexp
 | funexp
@@ -67,6 +67,10 @@ boollit:
 
 intlit:
 | TInt    { L02ast.IntLit ($1, ()) }
+;
+
+atomlit:
+| TAtom   { L02ast.AtomLit ($1, ()) }
 ;
 
 unitlit:
@@ -86,11 +90,10 @@ appexp:
 | OOpenParen exp OClosedParen OOpenParen separated_list(OComma, exp) OClosedParen
     { L02ast.App($2, $5, ()) }
 
+funkw: KFun | KLam { } ;
+
 funexp:
-| KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty
-OEquals exp
-| KLam OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty
-OEquals exp
+| funkw OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty OEquals exp
     { L02ast.Fun($3, $6, $8, ()) }
 ;
 
