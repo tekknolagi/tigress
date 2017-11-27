@@ -1,27 +1,35 @@
 let exp s = s ^ ";"
 let paren s = "(" ^ s ^ ")"
 
+let i x = L02ast.IntLit (x, ())
+let a x = L02ast.AtomLit (x, ())
+let u = L02ast.UnitLit ()
+
 let expressions = let open L02ast in [
   "true", BoolLit (true, ());
   "false", BoolLit (false, ());
-  "1", IntLit (1, ());
-  "100", IntLit (100, ());
-  "-12", Mathop (Minus, IntLit (0, ()), IntLit (12, ()), ());
-  "100+2", Mathop (Plus, IntLit (100, ()), IntLit (2, ()), ());
-  "100-2", Mathop (Minus, IntLit (100, ()), IntLit (2, ()), ());
-  "100*2", Mathop (Times, IntLit (100, ()), IntLit (2, ()), ());
-  "100/2", Mathop (Divide, IntLit (100, ()), IntLit (2, ()), ());
+  "1", i 1;
+  "100", i 100;
+  "-12", Mathop (Minus, i 0, i 12, ());
+  "100+2", Mathop (Plus, i 100, i 2, ());
+  "100-2", Mathop (Minus, i 100, i 2, ());
+  "100*2", Mathop (Times, i 100, i 2, ());
+  "100/2", Mathop (Divide, i 100, i 2, ());
   "atom", AtomLit ("atom", ());
   "atom_with_underscores", AtomLit ("atom_with_underscores", ());
   "V", Var ("V", ());
   "Var", Var ("Var", ());
   "()", UnitLit ();
-  "1=2", Cmpop (Equals, IntLit (1, ()), IntLit (2, ()), ());
-  "1<2", Cmpop (Lt, IntLit (1, ()), IntLit (2, ()), ());
-  "1<=2", Cmpop (Lte, IntLit (1, ()), IntLit (2, ()), ());
-  "1>2", Cmpop (Gt, IntLit (1, ()), IntLit (2, ()), ());
-  "1>=2", Cmpop (Gte, IntLit (1, ()), IntLit (2, ()), ());
-  "1<>2", Not (Cmpop (Equals, IntLit (1, ()), IntLit (2, ()), ()), ());
+  "1=2", Cmpop (Equals, i 1, i 2, ());
+  "1<2", Cmpop (Lt, i 1, i 2, ());
+  "1<=2", Cmpop (Lte, i 1, i 2, ());
+  "1>2", Cmpop (Gt, i 1, i 2, ());
+  "1>=2", Cmpop (Gte, i 1, i 2, ());
+  "1<>2", Not (Cmpop (Equals, i 1, i 2, ()), ());
+  "if 3 then 4 else 5 end", IfElse (i 3, i 4, i 5, ());
+  "if 5 < 6 then 4 else 5 end", IfElse (Cmpop (Lt, i 5, i 6, ()), i 4, i 5, ());
+  "if 5 < 6 then a else b end", IfElse (Cmpop (Lt, i 5, i 6, ()), a "a", a "b", ());
+  "if 3 then 4 end", IfElse (i 3, i 4, u, ());
 ]
 
 let parse_tests =
