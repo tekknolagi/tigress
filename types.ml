@@ -4,6 +4,7 @@ let rec string_of_ty = function
   | IntTy -> "Int"
   | UnitTy -> "Unit"
   | AtomTy -> "Atom"
+  | FunTy ([], ret) -> "(nothing) -> " ^ string_of_ty ret
   | FunTy (args, ret) ->
       (String.concat ", " @@ List.map string_of_ty args) ^ " -> "
       ^ string_of_ty ret
