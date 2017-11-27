@@ -32,9 +32,9 @@ let parse_expressions =
   "1>2", Cmpop (Gt, i 1, i 2, ());
   "1>=2", Cmpop (Gte, i 1, i 2, ());
   "1<>2", Not (Cmpop (Equals, i 1, i 2, ()), ());
-  "if 3 then 4 else 5 end", IfElse (i 3, i 4, i 5, ());
-  "if 5 < 6 then 4 else 5 end", IfElse (Cmpop (Lt, i 5, i 6, ()), i 4, i 5, ());
-  "if 5 < 6 then a else b end",
+  "if 3 then 4 else 5", IfElse (i 3, i 4, i 5, ());
+  "if 5 < 6 then 4 else 5", IfElse (Cmpop (Lt, i 5, i 6, ()), i 4, i 5, ());
+  "if 5 < 6 then a else b",
     IfElse (Cmpop (Lt, i 5, i 6, ()), a "a", a "b", ());
   "if 3 then 4 end", IfElse (i 3, i 4, u, ());
   "let X : Int = 5 in X end", Let (("X", IntTy), i 5, v "X", ());

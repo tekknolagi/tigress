@@ -22,6 +22,7 @@
 %token<string> Ident
 %token<Types.ty> Ty
 %token OFunArr
+%left KIf
 %left KFun
 %left OLt OGt
 %left OLte OGte
@@ -55,7 +56,8 @@ exp:
 | exp cmpop exp                    { L02ast.(Cmpop($2, $1, $3, ())) }
 | exp ONotEquals exp               { L02ast.((Not(Cmpop(Equals, $1, $3, ()), ()))) }
 | OMinus exp %prec OUminus         { L02ast.(Mathop(Minus, IntLit (0, ()), $2, ())) }
-| KIf exp KThen exp KElse exp KEnd { L02ast.IfElse($2, $4, $6, ()) }
+| KIf exp KThen exp KElse exp %prec KIf
+                                   { L02ast.IfElse($2, $4, $6, ()) }
 | KIf exp KThen exp KEnd           { L02ast.(IfElse($2, $4, UnitLit (), ())) }
 ;
 
