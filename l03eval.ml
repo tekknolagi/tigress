@@ -39,9 +39,12 @@ let rec eval (varenv : (value ref) env) (exp : Types.ty L02ast.exp) =
     | Not (e, _) -> let BoolVal v = ev e in BoolVal (not v)
     | IfElse (cond, iftrue, iffalse, _) ->
         let BoolVal v = ev cond in if v then ev iftrue else ev iffalse
-    | Let ((n, _), e, b, _) ->
-        let varenv' = (n, ref (ev e))::varenv in eval varenv' b
-    (* TODO: handle recursion and stuff *)
+    | Let ((n, _), (Fun _ as e), b, _) ->
+        let ClosureVal (formalNames, body, cl_env) = ev e in
+        let rec v' = ClosureVal (formalNames, body, (n, ref v')::cl_env) in
+        let varenv' = (n, ref v')::varenv in
+        eval varenv' b
+    | Let ((n, _), e, b, _) -> eval ((n, ref @@ ev e)::varenv) b
     | Fun (formals, _, body, _) ->
         ClosureVal (List.map fst formals, body, varenv)
     | App (f, actuals, _) ->
