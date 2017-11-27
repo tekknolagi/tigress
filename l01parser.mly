@@ -88,9 +88,9 @@ appexp:
 
 funexp:
 | KFun OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty
-OEquals exp KEnd
+OEquals exp
 | KLam OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty
-OEquals exp KEnd
+OEquals exp
     { L02ast.Fun($3, $6, $8, ()) }
 ;
 
