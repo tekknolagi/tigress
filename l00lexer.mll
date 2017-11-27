@@ -5,8 +5,7 @@
 }
 
 rule token = parse
-| [' ' '\t']        { token lexbuf }
-| '\n'            { EOL }
+| [' ' '\t' '\n']        { token lexbuf }
 | "true"          { TBool true }
 | "false"         { TBool false }
 | "if"            { KIf }
@@ -38,6 +37,7 @@ rule token = parse
 | ">="            { OGte }
 | "fun"           { KFun }
 | "\\"            { KLam }
+| ";"             { KSemi }
 
 (*
 | "nil"           { KNil }

@@ -9,13 +9,12 @@
     | _ -> raise @@ ShouldNotHappen "Not given fun"
 %}
 
-%token EOL
 %token OPlus OMinus OTimes ODivide
 %token ONot ONotEquals OLt OGt OLte OGte
 %token OEquals OColon OComma
 %token OOpenParen OClosedParen
 %token KIf KThen KElse KEnd
-%token KLet KIn KFun KLam
+%token KLet KIn KFun KLam KSemi
 %token<int> TInt
 %token<bool> TBool
 %token<string> TAtom
@@ -33,7 +32,7 @@
 
 %%
 main:
-  exp EOL { $1 }
+  exp KSemi { $1 }
 ;
 
 exp:
