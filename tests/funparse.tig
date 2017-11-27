@@ -1,0 +1,5 @@
+let F = \(X:Int):Int =
+  X + 1
+in
+  F(5)
+end;

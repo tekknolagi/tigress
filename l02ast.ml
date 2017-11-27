@@ -126,8 +126,7 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
   | Let ((n, t), (Fun (formals, fret, fbody, _) as e), b, _) ->
       let tyFormals = List.map snd formals in
       let tyN = FunTy (tyFormals, fret) in
-      let varenv' = (n,tyN)::varenv in
-      let te = typecheck varenv' e in
+      let te = typecheck ((n,tyN)::varenv) e in
       if t <> tyOf te then tyMismatch "let" t (tyOf te);
       let tb = typecheck ((n, tyOf te)::varenv) b in
       Let ((n, t), te, tb, tyOf tb)
@@ -145,12 +144,12 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
   | App (f, actuals, _) ->
       let typedActuals = List.map ty actuals in
       let typesOfActuals = List.map tyOf typedActuals in
-      let typed_f = ty f in
-      (match tyOf typed_f with
-      | FunTy (ts_formals, retTy) ->
-          if typesOfActuals <> ts_formals
-          then tyMismatch "apply" (tyOf typed_f) (FunTy (typesOfActuals, retTy))
-          else App (typed_f, typedActuals, retTy)
+      let tyF = ty f in
+      (match tyOf tyF with
+      | FunTy (typesOfFormals, retTy) ->
+          if typesOfActuals <> typesOfFormals
+          then tyMismatch "apply" (tyOf tyF) (FunTy (typesOfActuals, retTy))
+          else App (tyF, typedActuals, retTy)
       | _ -> raise @@ TypeError "non-function applied to arguments")
 
 

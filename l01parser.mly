@@ -10,7 +10,7 @@
     | _ -> raise @@ ShouldNotHappen "Not given fun"
 %}
 
-%token OPlus OMinus OTimes ODivide
+%token OPlus OMinus OStar ODivide
 %token ONot ONotEquals OLt OGt OLte OGte
 %token OEquals OColon OComma
 %token OOpenParen OClosedParen
@@ -21,11 +21,12 @@
 %token<string> TAtom
 %token<string> Ident
 %token<Types.ty> Ty
+%token OFunArr
 %left KFun
 %left OLt OGt
 %left OLte OGte
 %left OPlus OMinus /* lowest precedence */
-%left OTimes ODivide /* mid-level precedence */
+%left OStar ODivide /* mid-level precedence */
 %left ONot
 %nonassoc ONotEquals OEquals
 %nonassoc OUminus /* highest precedence */
@@ -59,7 +60,7 @@ exp:
 ;
 
 %inline mathop:
-OPlus { Plus } | OMinus { Minus } | OTimes { Times } | ODivide { Divide }
+OPlus { Plus } | OMinus { Minus } | OStar { Times } | ODivide { Divide }
 ;
 
 %inline cmpop:
@@ -113,6 +114,12 @@ OEquals exp
 
 ty:
 | Ty    { $1 }
+| typaramlist OFunArr Ty { FunTy ($1, $3) }
+;
+
+typaramlist:
+| Ty    { [$1] }
+| OOpenParen separated_list(OStar, ty) OClosedParen { $2 }
 ;
 
 %%

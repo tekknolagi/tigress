@@ -19,13 +19,14 @@ rule token = parse
 | "Int"           { Ty IntTy }
 | "Atom"          { Ty AtomTy }
 | "Unit"          { Ty UnitTy }
+| "->"            { OFunArr }
 
 | "not"           { ONot }
 | "("             { OOpenParen }
 | ")"             { OClosedParen }
 | "+"             { OPlus }
 | "-"             { OMinus }
-| "*"             { OTimes }
+| "*"             { OStar }
 | "/"             { ODivide }
 | "="             { OEquals }
 | ":"             { OColon }

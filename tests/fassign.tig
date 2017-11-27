@@ -1,0 +1,7 @@
+let F1 = \(X:Int):Int = X + 5
+in
+  let F2 : Int -> Int = F1
+  in
+    F2(5)
+  end
+end;
