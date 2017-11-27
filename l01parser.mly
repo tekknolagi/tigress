@@ -22,6 +22,7 @@
 %token<string> Ident
 %token<Types.ty> Ty
 %token OFunArr
+%left KLet
 %left KIf
 %left KFun
 %left OLt OGt
@@ -42,7 +43,7 @@ main:
 exp:
 | appexp
 | funexp %prec KFun
-| letexp                           { $1 }
+| letexp %prec KLet                { $1 }
 
 | boollit
 | intlit
@@ -107,9 +108,9 @@ OEquals exp
 ;
 
 %inline letexp:
-| KLet vardecl OEquals exp KIn exp KEnd
+| KLet vardecl OEquals exp KIn exp
       { L02ast.(Let($2, $4, $6, ())) }
-| KLet Ident OEquals funexp KIn exp KEnd
+| KLet Ident OEquals funexp KIn exp
       { let ty = tyOfFun $4 in
         L02ast.(Let(($2, ty), $4, $6, ())) }
 ;

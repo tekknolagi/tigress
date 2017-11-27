@@ -32,13 +32,15 @@ let parse_expressions =
   "1>2", Cmpop (Gt, i 1, i 2, ());
   "1>=2", Cmpop (Gte, i 1, i 2, ());
   "1<>2", Not (Cmpop (Equals, i 1, i 2, ()), ());
+  "1+2 < 3", Cmpop (Lt, Mathop (Plus, i 1, i 2, ()), i 3, ());
+  "1 + (2 < 3)", Mathop (Plus, i 1, Cmpop (Lt, i 2, i 3, ()), ());
   "if 3 then 4 else 5", IfElse (i 3, i 4, i 5, ());
   "if 5 < 6 then 4 else 5", IfElse (Cmpop (Lt, i 5, i 6, ()), i 4, i 5, ());
   "if 5 < 6 then a else b",
     IfElse (Cmpop (Lt, i 5, i 6, ()), a "a", a "b", ());
   "if 3 then 4 end", IfElse (i 3, i 4, u, ());
-  "let X : Int = 5 in X end", Let (("X", IntTy), i 5, v "X", ());
-  "let X : Int = 5 in X + 1 end",
+  "let X : Int = 5 in X", Let (("X", IntTy), i 5, v "X", ());
+  "let X : Int = 5 in X + 1",
     Let (("X", IntTy), i 5, Mathop (Plus, v "X", i 1, ()), ());
   "fun (X:Int):Int = X + 1",
     Fun (["X", IntTy], IntTy, Mathop (Plus, v "X", i 1, ()), ());
@@ -56,17 +58,17 @@ let parse_expressions =
       Fun (["X", IntTy], IntTy, Mathop (Plus, v "X", i 1, ()), ()),
       [i 3; i 4],
       ());
-  "let F = \\(X:Int):Int = 1 in F(hello) end",
+  "let F = \\(X:Int):Int = 1 in F(hello)",
     Let (
       ("F", FunTy ([IntTy], IntTy)),
       Fun (["X", IntTy], IntTy, i 1, ()),
       App (v "F", [a "hello"], ()),
       ());
-  "let F : (Int) -> Int = Fact in F end",
+  "let F : (Int) -> Int = Fact in F",
     Let (("F", FunTy ([IntTy], IntTy)), v "Fact", v "F", ());
-  "let F : Int -> Int = Fact in F end",
+  "let F : Int -> Int = Fact in F",
     Let (("F", FunTy ([IntTy], IntTy)), v "Fact", v "F", ());
-  "let F : ((Bool * Int) -> Atom) -> Int = Fact in F end",
+  "let F : ((Bool * Int) -> Atom) -> Int = Fact in F",
     Let (("F", FunTy ([FunTy ([BoolTy; IntTy], AtomTy)], IntTy)), v "Fact", v "F", ());
 ]
 
@@ -78,8 +80,8 @@ let parse_tests =
 let typesafe_expressions = [
   "1";
   "1 + 2";
-  "let F : Int = 3 in F end";
-  "let F : Int = 3 in F + 1 end";
+  "let F : Int = 3 in F";
+  "let F : Int = 3 in F + 1";
 ]
 
 let typesafe_tests =
@@ -90,7 +92,7 @@ let not_typesafe_expressions = [
   "1 + hello";
   "1 + true";
   "F";
-  "let F : Int = 3 in F(3) end";
+  "let F : Int = 3 in F(3)";
 ]
 
 let not_typesafe_tests =
@@ -103,11 +105,15 @@ let type_tests = let open L02ast in []
 let eval_tests = let open L02ast in []
 
 
+exception DidNotParse of string
 exception ShouldNotHavePassed
 
 
 let () =
-  let parse s = L01parser.main L00lexer.token @@ Lexing.from_string s in
+  let parse s =
+    try L01parser.main L00lexer.token @@ Lexing.from_string s
+    with exc -> raise @@ DidNotParse s
+  in
   let _type a = L02ast.typecheck [] a in
   let eval  t = L03eval.eval [] t in
 
