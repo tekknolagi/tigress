@@ -82,6 +82,7 @@ let typesafe_expressions = [
   "1 + 2";
   "let F : Int = 3 in F";
   "let F : Int = 3 in F + 1";
+  "(\\(X:Int):Int = X * 3)(2)";
 ]
 
 let typesafe_tests =
@@ -93,20 +94,39 @@ let not_typesafe_expressions = [
   "1 + true";
   "F";
   "let F : Int = 3 in F(3)";
+  "(\\(X:Int):Int = X * 3)(hello)";
 ]
 
 let not_typesafe_tests =
   List.map exp not_typesafe_expressions
 
 
-let type_tests = let open L02ast in []
+let typed_expressions =
+  let open L02ast in
+  let open Types in
+[
+  "1", IntLit (1, IntTy);
+  "\(X:Int):Int = X",
+    Fun (["X", IntTy], IntTy, Var ("X", IntTy), FunTy ([IntTy], IntTy));
+]
+
+let typed_tests =
+  List.map (fun (s,a) -> exp s, a) typed_expressions
 
 
-let eval_tests = let open L02ast in []
+let eval_expressions =
+  let open L02ast in
+[
+  "1", IntVal 1;
+  "1 + 2", IntVal 3;
+]
+
+let eval_tests =
+  List.map (fun (s,a) -> exp s, a) eval_expressions
 
 
 exception DidNotParse of string
-exception ShouldNotHavePassed
+exception ShouldNotHavePassed of string
 
 
 let () =
@@ -120,14 +140,28 @@ let () =
   let run_parse_test (given, expected) = assert ((parse given)=expected) in
   let run_typesafe_test given = ignore @@ _type @@ parse given in
   let run_not_typesafe_test given =
-    try ( ignore @@ _type @@ parse given; raise ShouldNotHavePassed )
+    try ( ignore @@ _type @@ parse given; raise @@ ShouldNotHavePassed given )
     with L02ast.TypeError _ -> ()
   in
-  let run_type_test (given, expected)  = assert ((_type given)=expected) in
-  let run_eval_test (given, expected)  = assert ((eval given)=expected) in
+  let run_typed_test (given, expected) =
+    assert ((_type @@ parse @@ given)=expected)
+  in
+  let run_eval_test (given, expected) =
+    assert ((eval @@ _type @@ parse @@ given)=expected)
+  in
 
-  List.iter run_parse_test parse_tests;
-  List.iter run_typesafe_test typesafe_tests;
-  List.iter run_not_typesafe_test not_typesafe_tests;
-  List.iter run_type_test  type_tests;
-  List.iter run_eval_test  eval_tests
+  (
+    let indent s = print_endline @@ "  " ^ s in
+    print_endline "Running tests...";
+    indent "Running parse tests...";
+    List.iter run_parse_test parse_tests;
+    indent "Running type-safety tests...";
+    List.iter run_typesafe_test typesafe_tests;
+    indent "Running non-type-safety tests...";
+    List.iter run_not_typesafe_test not_typesafe_tests;
+    indent "Running type annotation tests...";
+    List.iter run_typed_test  typed_tests;
+    indent "Running eval tests...";
+    List.iter run_eval_test  eval_tests;
+    print_endline "All tests passed.";
+  )
