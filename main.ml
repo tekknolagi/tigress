@@ -10,13 +10,13 @@ let _ =
       try
         if Unix.(isatty stdin) then ( print_string ">>> "; flush stdout );
         let ast = L01parser.main L00lexer.token lexbuf in
-        let tst = L02ast.typecheck basis ast in
+        let tst = L03typecheck.typecheck basis ast in
         (*
         let ren = L02ast.rename [] tst in
         print_endline @@ L02ast.(string_of_aexp (const "") ren);
         *)
 
-        let res = L03eval.eval basis tst in
+        let res = L04eval.eval basis tst in
         (
           print_endline @@ L02ast.string_of_value res;
           flush stdout

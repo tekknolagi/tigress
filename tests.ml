@@ -106,7 +106,7 @@ let typed_expressions =
   let open Types in
 [
   "1", IntLit (1, IntTy);
-  "\(X:Int):Int = X",
+  "\\(X:Int):Int = X",
     Fun (["X", IntTy], IntTy, Var ("X", IntTy), FunTy ([IntTy], IntTy));
 ]
 
@@ -134,14 +134,14 @@ let () =
     try L01parser.main L00lexer.token @@ Lexing.from_string s
     with exc -> raise @@ DidNotParse s
   in
-  let _type a = L02ast.typecheck [] a in
-  let eval  t = L03eval.eval [] t in
+  let _type a = L03typecheck.typecheck [] a in
+  let eval  t = L04eval.eval [] t in
 
   let run_parse_test (given, expected) = assert ((parse given)=expected) in
   let run_typesafe_test given = ignore @@ _type @@ parse given in
   let run_not_typesafe_test given =
     try ( ignore @@ _type @@ parse given; raise @@ ShouldNotHavePassed given )
-    with L02ast.TypeError _ -> ()
+    with L03typecheck.TypeError _ -> ()
   in
   let run_typed_test (given, expected) =
     assert ((_type @@ parse @@ given)=expected)
