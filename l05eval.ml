@@ -1,5 +1,6 @@
-type value = L02ast.value
+type 'a value = 'a L02ast.value
 type 'a env = 'a Types.env
+type renamed = Types.renamed
 
 exception BugInTypeChecking of string
 exception DivByZero
@@ -13,7 +14,7 @@ module L = struct
 end
 
 [@@@ warning "-8"] (* Ignore non-exhaustive *)
-let rec eval (varenv : (value ref) env) (exp : Types.ty L02ast.exp) =
+let rec eval (varenv : (renamed value ref) env) (exp : renamed L02ast.exp) =
   let open L02ast in
   let rec ev = function
     | BoolLit (b, _) -> BoolVal b

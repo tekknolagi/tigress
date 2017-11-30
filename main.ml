@@ -1,22 +1,15 @@
-(* open L03mir *)
-
 let const (type a) (type b) (x : a) (y : b) : a = x
 
 let _ =
   try
-    let basis = [] in
     let lexbuf = Lexing.from_channel stdin in
     while true do
       try
         if Unix.(isatty stdin) then ( print_string ">>> "; flush stdout );
         let ast = L01parser.main L00lexer.token lexbuf in
-        let tst = L03typecheck.typecheck basis ast in
-        (*
-        let ren = L02ast.rename [] tst in
-        print_endline @@ L02ast.(string_of_aexp (const "") ren);
-        *)
-
-        let res = L04eval.eval basis tst in
+        let tst = L03typecheck.typecheck [] ast in
+        let ren = L04scoperesolution.rename [] tst in
+        let res = L05eval.eval [] ren in
         (
           print_endline @@ L02ast.string_of_value res;
           flush stdout

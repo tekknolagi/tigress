@@ -59,7 +59,9 @@ datatype funrep = FUN of { fundecl: A.decl, impl: inst list }
 *)
 
 type 'a fundecl = symbol * (symbol Types.env) option * symbol option * 'a A.exp
-type funrep = Fun of { fundecl: Types.renamed fundecl; impl : inst list }
+
+type funrec = { fundecl : Types.renamed fundecl; impl : inst list }
+type funrep = Fun of funrec
 
 exception Unimplemented
 

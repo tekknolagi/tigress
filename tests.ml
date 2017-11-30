@@ -1,13 +1,20 @@
+module LEX = L00lexer
+module PAR = L01parser
+module AST = L02ast
+module TYP = L03typecheck
+module SCO = L04scoperesolution
+module EVA = L05eval
+
 let exp s = s ^ ";"
 let paren s = "(" ^ s ^ ")"
 
-let i x = L02ast.IntLit (x, ())
-let a x = L02ast.AtomLit (x, ())
-let v x = L02ast.Var (x, ())
-let u = L02ast.UnitLit ()
+let i x = AST.IntLit (x, ())
+let a x = AST.AtomLit (x, ())
+let v x = AST.Var (x, ())
+let u = AST.UnitLit ()
 
 let parse_expressions =
-  let open L02ast in
+  let open AST in
   let open Types in
 [
   "true", BoolLit (true, ());
@@ -105,7 +112,7 @@ let not_typesafe_tests =
 
 
 let typed_expressions =
-  let open L02ast in
+  let open AST in
   let open Types in
 [
   "1", IntLit (1, IntTy);
@@ -117,8 +124,11 @@ let typed_tests =
   List.map (fun (s,a) -> exp s, a) typed_expressions
 
 
+let renaming_tests = []
+
+
 let eval_expressions =
-  let open L02ast in
+  let open AST in
 [
   "1", IntVal 1;
   "1 + 2", IntVal 3;
@@ -137,23 +147,27 @@ exception ShouldNotHavePassed of string
 
 let () =
   let parse s =
-    try L01parser.main L00lexer.token @@ Lexing.from_string s
+    try PAR.main LEX.token @@ Lexing.from_string s
     with exc -> raise @@ DidNotParse s
   in
-  let _type a = L03typecheck.typecheck [] a in
-  let eval  t = L04eval.eval [] t in
+  let _type a = TYP.typecheck [] a in
+  let rename a = SCO.rename [] a in
+  let eval  t = EVA.eval [] t in
 
   let run_parse_test (given, expected) = assert ((parse given)=expected) in
   let run_typesafe_test given = ignore @@ _type @@ parse given in
   let run_not_typesafe_test given =
     try ( ignore @@ _type @@ parse given; raise @@ ShouldNotHavePassed given )
-    with L03typecheck.TypeError _ -> ()
+    with TYP.TypeError _ -> ()
   in
   let run_typed_test (given, expected) =
     assert ((_type @@ parse @@ given)=expected)
   in
+  let run_renaming_test (given, expected) =
+    assert true
+  in
   let run_eval_test (given, expected) =
-    assert ((eval @@ _type @@ parse @@ given)=expected)
+    assert ((eval @@ rename @@ _type @@ parse @@ given)=expected)
   in
 
   let indent s = print_string @@ "  " ^ s in
@@ -169,6 +183,7 @@ let () =
     run_test_suite "type-safety" run_typesafe_test typesafe_tests;
     run_test_suite "non-type-safety" run_not_typesafe_test not_typesafe_tests;
     run_test_suite "type annotation" run_typed_test typed_tests;
+    run_test_suite "renaming" run_renaming_test renaming_tests;
     run_test_suite "eval" run_eval_test eval_tests;
 
     print_endline "All tests passed.";

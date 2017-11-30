@@ -2,6 +2,7 @@ open Types
 open L02ast
 
 exception TypeError of string
+exception UniqueError of string
 
 let tyOf : 'a exp -> 'a = function
   | BoolLit (_, a) | IntLit (_, a) | AtomLit (_, a) | Var (_, a) -> a
@@ -16,6 +17,10 @@ let tyMismatch : string -> ty -> ty -> 'a = fun what exp act ->
 
 let rec typecheck varenv (exp : unit exp) : ty exp =
   let ty = typecheck varenv in
+  let rec assertNoDups = function
+    | [] -> ()
+    | x::xs -> if List.mem x xs then raise (UniqueError x) else assertNoDups xs
+  in
   match exp with
   | BoolLit (b, _) -> BoolLit (b, BoolTy)
   | IntLit (i, _) -> IntLit (i, IntTy)
@@ -67,6 +72,8 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       let tb = typecheck ((n, tyOf te)::varenv) b in
       Let ((n, t), te, tb, tyOf tb)
   | Fun (formals, ty, body, _) ->
+      let formalNames = List.map fst formals in
+      let () = assertNoDups formalNames in
       let tyFormals = List.map snd formals in
       let varenv' = formals @ varenv in
       let tbody = typecheck varenv' body in
