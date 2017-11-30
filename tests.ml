@@ -83,6 +83,9 @@ let typesafe_expressions = [
   "let F : Int = 3 in F";
   "let F : Int = 3 in F + 1";
   "(\\(X:Int):Int = X * 3)(2)";
+  "let Fact = \\(X:Int):Int = " ^
+  "  if X < 2 then 1 else X*Fact(X-1)" ^
+  "in let F : Int -> Int = Fact in F(5)";
 ]
 
 let typesafe_tests =
@@ -119,6 +122,9 @@ let eval_expressions =
 [
   "1", IntVal 1;
   "1 + 2", IntVal 3;
+  "let Fact = \\(X:Int):Int = " ^
+  "  if X < 2 then 1 else X*Fact(X-1)" ^
+  "in Fact(5)", IntVal 120;
 ]
 
 let eval_tests =
