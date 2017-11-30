@@ -156,18 +156,20 @@ let () =
     assert ((eval @@ _type @@ parse @@ given)=expected)
   in
 
-  (
-    let indent s = print_endline @@ "  " ^ s in
+  let indent s = print_string @@ "  " ^ s in
+  let run_test_suite what f tests = (
+    indent @@ "Running " ^ what ^ " tests...";
+    List.iter f tests;
+    print_endline @@ " " ^ (string_of_int @@ List.length tests) ^ " passed!";
+  )
+  in (
     print_endline "Running tests...";
-    indent "Running parse tests...";
-    List.iter run_parse_test parse_tests;
-    indent "Running type-safety tests...";
-    List.iter run_typesafe_test typesafe_tests;
-    indent "Running non-type-safety tests...";
-    List.iter run_not_typesafe_test not_typesafe_tests;
-    indent "Running type annotation tests...";
-    List.iter run_typed_test  typed_tests;
-    indent "Running eval tests...";
-    List.iter run_eval_test  eval_tests;
+
+    run_test_suite "parse" run_parse_test parse_tests;
+    run_test_suite "type-safety" run_typesafe_test typesafe_tests;
+    run_test_suite "non-type-safety" run_not_typesafe_test not_typesafe_tests;
+    run_test_suite "type annotation" run_typed_test typed_tests;
+    run_test_suite "eval" run_eval_test eval_tests;
+
     print_endline "All tests passed.";
   )
