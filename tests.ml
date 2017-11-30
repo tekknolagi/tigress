@@ -150,9 +150,9 @@ let () =
     try PAR.main LEX.token @@ Lexing.from_string s
     with exc -> raise @@ DidNotParse s
   in
-  let _type a = TYP.typecheck [] a in
-  let rename a = SCO.rename [] a in
-  let eval  t = EVA.eval [] t in
+  let _type = TYP.typecheck [] in
+  let rename = SCO.rename [] in
+  let eval  = EVA.eval [] in
 
   let run_parse_test (given, expected) = assert ((parse given)=expected) in
   let run_typesafe_test given = ignore @@ _type @@ parse given in
