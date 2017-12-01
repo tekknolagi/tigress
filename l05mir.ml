@@ -152,21 +152,16 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       (expBody, insBody, funsBody)
 
   | A.App ((Var (fn, _)) as f, actuals, ann) ->
-
       let (expF, insF, funsF) = lower f in
       let loweredActuals = List.map lower actuals in
-      let expActuals =
-        List.map (fun (e, _, _) -> e) loweredActuals
-      in
+      let expActuals = List.map (fun (e, _, _) -> e) loweredActuals in
       let insActuals =
         List.concat @@ List.map (fun (_, i, _) -> i) loweredActuals
       in
       let funActuals =
         List.concat @@ List.map (fun (_, _, f) -> f) loweredActuals
       in
-
       let resultVariable = genLabel "return" in
-
       ( Var resultVariable,
         insActuals @ [
           Call (fn, resultVariable, expActuals);
