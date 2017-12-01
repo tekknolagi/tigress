@@ -32,7 +32,8 @@ let rec string_of_inst = function
   | Label s -> "L:" ^ s
   | Move (dst, src) -> "(" ^ string_of_tree dst ^ ") <- " ^ string_of_tree src
   | Call (f, res, args) ->
-      res ^ " <- " ^ f ^ "(" ^ (String.concat ", " @@ List.map string_of_tree args)
+      string_of_tree (Var res) ^ " <- " ^ f ^ "(" ^
+      (String.concat ", " @@ List.map string_of_tree args) ^ ")"
   | Ret v -> "ret " ^ string_of_tree v
   | Jump l -> "jump " ^ l
   | Cjump (o, l, r, loc) ->
