@@ -2,13 +2,14 @@ module A = L02ast
 
 type inst =
   | Label of symbol
+  (*        dst,   src    *)
   | Move of tree * tree
   (*        funname, result variable, args *)
   | Call of symbol * symbol * tree list
   | Ret of tree
   | Jump of symbol
   (*         op,     L,     R,     location *)
-  | Cjump of cmpop * tree * tree * symbol
+  | Cjump of A.cmpop * tree * tree * symbol
 
 and tree =
   | Imm of int
@@ -17,14 +18,14 @@ and tree =
   | Mem of tree
   | Var of symbol
   (*         op,   e  *)
+  (*
   | Unop of unop * tree
-  (*         op,     L,     R    *)
-  | Binop of binop * tree * tree
+  *)
+  (*         op,        L,     R    *)
+  | Binop of A.mathop * tree * tree
   | Empty
 
 and unop = Not | Neg
-and binop = Plus | Minus | Times | Divide
-and cmpop = Eq | Neq | Lt | Lte | Gt | Gte
 and symbol = string
 
 let rec string_of_inst = function
@@ -44,12 +45,16 @@ and string_of_tree = function
   | String s -> "@" ^ s
   | Mem t -> "*(" ^ string_of_tree t ^ ")"
   | Var s -> "V:" ^ s
+  (*
   | Unop (o, e) -> string_of_unop o ^ "(" ^ string_of_tree e ^ ")"
+  *)
   | Binop (o, l, r) -> string_of_tree l ^ string_of_binop o ^ string_of_tree r
 and string_of_unop = function | Not -> "!" | Neg -> "-"
 and string_of_cmpop o =
-  " " ^ (function | Eq -> "==" | Neq -> "!=" | Lt -> "<" | Lte -> "<=" | Gt -> ">" | Gte -> ">=") o ^ " "
+  let open A in
+  " " ^ (function | Equals -> "==" | Lt -> "<" | Lte -> "<=" | Gt -> ">" | Gte -> ">=") o ^ " "
 and string_of_binop o =
+  let open A in
   " " ^ (function | Plus -> "+" | Minus -> "-" | Times -> "*" | Divide -> "/") o ^ " "
 
 (* -- Representation for a function
@@ -65,6 +70,13 @@ type funrep = Fun of funrec
 
 exception Unimplemented
 
+(* TODO: make this so that it is a per-name counter *)
+let labelCounter = ref 0
+let genLabel s =
+  let l = "__" ^ s ^ (string_of_int !labelCounter) in
+  labelCounter := !labelCounter + 1;
+  l
+
 let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.BoolLit (true, _) -> (Imm 1, [], [])
   | A.BoolLit (false, _) -> (Imm 0, [], [])
@@ -73,26 +85,61 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.AtomLit (a, _) -> (String a, [], [])
   | A.Var (n, _) -> (Var n, [], [])
 
-  | A.Plus (l, r, _) ->
+  | A.Mathop (op, l, r, _) ->
       let (expL, insL, funsL) = lower l in
       let (expR, insR, funsR) = lower r in
-      (Binop (Plus, expL, expR), insL @ insR, funsL @ funsR)
-  | A.Minus (l, r, _) ->
-      let (expL, insL, funsL) = lower l in
-      let (expR, insR, funsR) = lower r in
-      (Binop (Minus, expL, expR), insL @ insR, funsL @ funsR)
-  | A.Times (l, r, _) ->
-      let (expL, insL, funsL) = lower l in
-      let (expR, insR, funsR) = lower r in
-      (Binop (Times, expL, expR), insL @ insR, funsL @ funsR)
-  | A.Divide (l, r, _) ->
-      let (expL, insL, funsL) = lower l in
-      let (expR, insR, funsR) = lower r in
-      (Binop (Divide, expL, expR), insL @ insR, funsL @ funsR)
+      (Binop (op, expL, expR), insL @ insR, funsL @ funsR)
 
-  | A.Not (e, _) ->
-      let (loweredE, instsE, funsE) = lower e in
-      (Unop (Not, loweredE), instsE, funsE)
+  (* TODO: add special cases for and/or *)
+  | A.Cmpop (op, l, r, ann) as c ->
+      let (expL, insL, funsL) = lower l in
+      let (expR, insR, funsR) = lower r in
+      let cmpOutputVar = genLabel "outputVar" in
+      let trueBranch = genLabel "trueBranch" in
+      let endOfBlock = genLabel "endOfBlock" in
+
+
+      ( Var cmpOutputVar,
+        insL @
+        insR @
+        [
+          Cjump (op, expL, expR, trueBranch);
+          Move (Var cmpOutputVar, Imm 0);
+          Jump endOfBlock;
+          Label trueBranch;
+          Move (Var cmpOutputVar, Imm 1);
+          Label endOfBlock;
+        ],
+        funsL @ funsR )
+
+
+
+  | A.IfElse (cond, ift, iff, _) ->
+      let (expCond, insCond, funsCond) = lower cond in
+      let (expT, insT, funsT) = lower ift in
+      let (expF, insF, funsF) = lower iff in
+
+      let ifOutputVar = genLabel "outputVar" in
+      let falseBranch = genLabel "falseBranch" in
+      let endOfBlock = genLabel "endOfBlock" in
+
+      ( Var ifOutputVar,
+        insCond @
+        [ Cjump (Equals, expCond, Imm 0, falseBranch); ] @
+        insT @
+        [
+          Move (Var ifOutputVar, expT);
+          Jump endOfBlock;
+          Label falseBranch;
+        ] @
+        insF @
+        [
+          Move (Var ifOutputVar, expF);
+          Label endOfBlock;
+        ],
+        funsCond @ funsT @ funsF
+      )
+
 
       (*
   | A.Lt (l, r, _) ->

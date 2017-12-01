@@ -9,17 +9,12 @@ let _ =
         let ast = L01parser.main L00lexer.token lexbuf in
         let tst = L03typecheck.typecheck [] ast in
         let ren = L04scoperesolution.rename [] tst in
-        let res = L05eval.eval [] ren in
+        (* let res = L05eval.eval [] ren in *)
+        let (t, insts, funs) = L05mir.lower ren in
         (
-          print_endline @@ L02ast.string_of_value res;
-          flush stdout
-        )
-        (*
-        let (t, insts, funs) = L03mir.lower ren in
-        (
-          let treeString = L03mir.string_of_tree t in
+          let treeString = L05mir.string_of_tree t in
           let instructionsString =
-            String.concat "\n" @@ List.map L03mir.string_of_inst insts
+            String.concat "\n" @@ List.map L05mir.string_of_inst insts
           in
           let funsString = "" in
           print_endline "----------";
@@ -31,7 +26,6 @@ let _ =
           print_endline "----------";
           print_newline ();
         )
-        *)
 
         (*
         *)

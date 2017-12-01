@@ -18,7 +18,7 @@ type 'a exp =
   | App of ('a exp * 'a exp list * 'a)
 
 and mathop = Plus | Minus | Times | Divide
-and cmpop = Lt | Lte | Gt | Gte | Equals
+and cmpop = Equals | Lt | Lte | Gt | Gte
 
 and vardecl = name * ty
 and name = string
