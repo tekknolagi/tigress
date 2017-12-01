@@ -38,11 +38,12 @@ let string_of_value = function
   | ClosureVal _ -> "(closure)"
   | Unspecified -> "UNSPECIFIED"
 
+let string_of_vardecl (n, t) = n ^ " : " ^ string_of_ty t
+
 let rec string_of_aexp f exp =
   let toS = string_of_aexp f in
   let ann a = let s = f a in if s="" then "" else " : " ^ s in
   let fmt2 tag l r a = tag ^ " (" ^ toS l ^ ", " ^ toS r ^ ")" ^ ann a in
-  let string_of_vardecl (n, t) = n ^ " : " ^ string_of_ty t in
   let string_of_mathop o =
     List.assoc o [Plus,"Plus"; Minus,"Minus"; Times,"Times"; Divide,"Divide"]
   in

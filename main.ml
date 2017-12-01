@@ -16,7 +16,9 @@ let _ =
           let instructionsString =
             String.concat "\n" @@ List.map L05mir.string_of_inst insts
           in
-          let funsString = "" in
+          let funsString =
+            String.concat "\n" @@ List.map L05mir.string_of_funrep funs
+          in
           print_endline "----------";
           print_endline funsString;
           print_newline ();
@@ -26,9 +28,6 @@ let _ =
           print_endline "----------";
           print_newline ();
         )
-
-        (*
-        *)
 
       with
       | Failure _ -> exit 0

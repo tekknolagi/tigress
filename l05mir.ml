@@ -57,16 +57,16 @@ and string_of_binop o =
   let open A in
   " " ^ (function | Plus -> "+" | Minus -> "-" | Times -> "*" | Divide -> "/") o ^ " "
 
-(* -- Representation for a function
-      a FUNDECL and a list of instructions
-
-datatype funrep = FUN of { fundecl: A.decl, impl: inst list }
-*)
-
-type 'a fundecl = symbol * (symbol Types.env) option * symbol option * 'a A.exp
-
+type 'a fundecl = symbol * A.vardecl list * Types.ty (* * 'a A.exp *)
 type funrec = { fundecl : Types.renamed fundecl; impl : inst list }
 type funrep = Fun of funrec
+
+let string_of_funrep = function
+  | Fun ({ fundecl = (name, formals, ty); impl = insts }) ->
+      "function " ^ name ^ "(" ^ (
+        String.concat ", " @@ List.map A.string_of_vardecl formals
+      ) ^ "):\n  " ^
+      String.concat "\n  " @@ List.map string_of_inst insts
 
 exception Unimplemented
 
@@ -91,7 +91,7 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       (Binop (op, expL, expR), insL @ insR, funsL @ funsR)
 
   (* TODO: add special cases for and/or *)
-  | A.Cmpop (op, l, r, ann) as c ->
+  | A.Cmpop (op, l, r, ann) ->
       let (expL, insL, funsL) = lower l in
       let (expR, insR, funsR) = lower r in
       let cmpOutputVar = genLabel "outputVar" in
@@ -125,7 +125,7 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
 
       ( Var ifOutputVar,
         insCond @
-        [ Cjump (Equals, expCond, Imm 0, falseBranch); ] @
+        [ Cjump (A.Equals, expCond, Imm 0, falseBranch); ] @
         insT @
         [
           Move (Var ifOutputVar, expT);
@@ -140,20 +140,56 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
         funsCond @ funsT @ funsF
       )
 
+      (*
+  | A.Not (e, _) ->
+      let (loweredE, instsE, funsE) = lower e in
+      (Unop (Not, loweredE), instsE, funsE)
+      *)
+
+  | A.Fun (formals, ty, body, ann) ->
+      let (expBody, insBody, funsBody) = lower body in
+      (expBody, insBody, funsBody)
+
+  | A.App ((Var (fn, _)) as f, actuals, ann) ->
+
+      let (expF, insF, funsF) = lower f in
+      let loweredActuals = List.map lower actuals in
+      let expActuals =
+        List.map (fun (e, _, _) -> e) loweredActuals
+      in
+      let insActuals =
+        List.concat @@ List.map (fun (_, i, _) -> i) loweredActuals
+      in
+      let funActuals =
+        List.concat @@ List.map (fun (_, _, f) -> f) loweredActuals
+      in
+
+      let resultVariable = genLabel "return" in
+
+      ( Var resultVariable,
+        insActuals @ [
+          Call (fn, resultVariable, expActuals);
+        ],
+        funActuals )
+
+  (* | Fun of (vardecl list * ty * 'a exp * 'a) *)
+  | A.Let ((n, _), (A.Fun (formals, ty, funBody, ann) as f), body, _) ->
+      let (_expBody, insBody, funsBody) = lower body in
+      let (_expFunBody, insFunBody, funsFunBody) = lower f in
+      (Empty, [], funsBody @ funsFunBody @ [
+        Fun ({
+          fundecl = (n, formals, ty);
+          impl = insFunBody;
+        })
+      ])
 
       (*
-  | A.Lt (l, r, _) ->
-      let (expL, insL, funsL) = lower l in
-      let (expR, insR, funsR) = lower r in
-      (Cmp
+      let (expE, insE, funsE) = lower e in
+      let (expBody, insBody, funsBody) = lower body in
+      (expBody, insE @ [ Move (Var n, expE) ] @ insBody, funsE @ funsBody)
       *)
 
   | A.Let ((n, _), e, body, _) ->
       let (expE, insE, funsE) = lower e in
       let (expBody, insBody, funsBody) = lower body in
       (expBody, insE @ [ Move (Var n, expE) ] @ insBody, funsE @ funsBody)
-
-      (*
-  | A.Fun (formals, ty, body, _) ->
-      (Empty, 
-      *)
