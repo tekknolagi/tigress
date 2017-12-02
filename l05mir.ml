@@ -1,3 +1,4 @@
+open Common
 module A = L02ast
 
 type inst =
@@ -22,9 +23,10 @@ and tree =
   | Unop of unop * tree
   *)
   (*         op,        L,     R    *)
-  | Binop of A.mathop * tree * tree
+  | Binop of binop * tree * tree
   | Empty
 
+and binop = Math of A.mathop | Cmp of A.cmpop
 and unop = Not | Neg
 and symbol = string
 
@@ -37,7 +39,7 @@ let rec string_of_inst = function
   | Ret v -> "ret " ^ string_of_tree v
   | Jump l -> "jump " ^ l
   | Cjump (o, l, r, loc) ->
-      "if (" ^ string_of_tree l ^ string_of_cmpop o
+      "if (" ^ string_of_tree l ^ " " ^ string_of_binop (Cmp o) ^ " "
       ^ string_of_tree r ^ ") " ^ string_of_inst (Jump loc)
 and string_of_tree = function
   | Empty -> "Nop"
@@ -49,16 +51,14 @@ and string_of_tree = function
   (*
   | Unop (o, e) -> string_of_unop o ^ "(" ^ string_of_tree e ^ ")"
   *)
-  | Binop (o, l, r) -> string_of_tree l ^ string_of_binop o ^ string_of_tree r
+  | Binop (o, l, r) ->
+      string_of_tree l ^ " "  ^ string_of_binop o ^ " " ^ string_of_tree r
 and string_of_unop = function | Not -> "!" | Neg -> "-"
-and string_of_cmpop o =
-  let open A in
-  " " ^ (function | Equals -> "==" | Lt -> "<" | Lte -> "<=" | Gt -> ">" | Gte -> ">=") o ^ " "
-and string_of_binop o =
-  let open A in
-  " " ^ (function | Plus -> "+" | Minus -> "-" | Times -> "*" | Divide -> "/") o ^ " "
+and string_of_binop = let open A in function
+  | Math m -> List.assoc m [Plus,"+"; Minus,"-"; Times,"*"; Divide,"/"]
+  | Cmp  c -> List.assoc c [Equals,"=="; Lt,"<"; Lte,"<="; Gt,">"; Gte,">="]
 
-type 'a fundecl = symbol * A.vardecl list * Types.ty (* * 'a A.exp *)
+type 'a fundecl = symbol * A.vardecl list * Types.ty
 type funrec = { fundecl : Types.renamed fundecl; impl : inst list }
 type funrep = Fun of funrec
 
@@ -71,12 +71,16 @@ let string_of_funrep = function
 
 exception Unimplemented
 
-(* TODO: make this so that it is a per-name counter *)
-let labelCounter = ref 0
+let labelCounter = ref []
 let genLabel s =
-  let l = "__" ^ s ^ (string_of_int !labelCounter) in
-  labelCounter := !labelCounter + 1;
-  l
+  match L.assoc_opt s !labelCounter with
+  | Some c ->
+      let l = "__" ^ s ^ (string_of_int c) in
+      labelCounter := (s, c+1):: !labelCounter;
+      l
+  | None ->
+      labelCounter := (s, 1):: !labelCounter;
+      s
 
 let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.BoolLit (true, _) -> (Imm 1, [], [])
@@ -89,31 +93,12 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.Mathop (op, l, r, _) ->
       let (expL, insL, funsL) = lower l in
       let (expR, insR, funsR) = lower r in
-      (Binop (op, expL, expR), insL @ insR, funsL @ funsR)
-
-  (* TODO: add special cases for and/or *)
-  | A.Cmpop (op, l, r, ann) ->
+      (Binop (Math op, expL, expR), insL @ insR, funsL @ funsR)
+  | A.Cmpop (op, l, r, _) ->
+      (* TODO: add special cases for and/or *)
       let (expL, insL, funsL) = lower l in
       let (expR, insR, funsR) = lower r in
-      let cmpOutputVar = genLabel "outputVar" in
-      let trueBranch = genLabel "trueBranch" in
-      let endOfBlock = genLabel "endOfBlock" in
-
-
-      ( Var cmpOutputVar,
-        insL @
-        insR @
-        [
-          Cjump (op, expL, expR, trueBranch);
-          Move (Var cmpOutputVar, Imm 0);
-          Jump endOfBlock;
-          Label trueBranch;
-          Move (Var cmpOutputVar, Imm 1);
-          Label endOfBlock;
-        ],
-        funsL @ funsR )
-
-
+      (Binop (Cmp op, expL, expR), insL @ insR, funsL @ funsR)
 
   | A.IfElse (cond, ift, iff, _) ->
       let (expCond, insCond, funsCond) = lower cond in
@@ -148,8 +133,7 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       *)
 
   | A.Fun (formals, ty, body, ann) ->
-      let (expBody, insBody, funsBody) = lower body in
-      (expBody, insBody, funsBody)
+      lower body
 
   | A.App ((Var (fn, _)) as f, actuals, ann) ->
       let (expF, insF, funsF) = lower f in

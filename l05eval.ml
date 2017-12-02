@@ -1,3 +1,5 @@
+open Common
+
 type 'a value = 'a L02ast.value
 type 'a env = 'a Types.env
 type renamed = Types.renamed
@@ -7,11 +9,6 @@ exception DivByZero
 exception Unspecified of string
 exception Unbound of string
 
-module L = struct
-  let assoc_opt n h =
-    try Some (List.assoc n h)
-    with Not_found -> None
-end
 
 [@@@ warning "-8"] (* Ignore non-exhaustive *)
 let rec eval (varenv : (renamed value ref) env) (exp : renamed L02ast.exp) =
