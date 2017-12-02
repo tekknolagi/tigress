@@ -78,6 +78,8 @@ let genLabel s =
       labelCounter := (s, 1):: !labelCounter;
       s
 
+exception BugInLowering of string
+
 let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
   let gen_fundecl name formals ty body =
     let (expBody, insBody, funsBody) = lower body in
@@ -141,7 +143,11 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
       ( Var n, [], funsBody)
 
   | A.App (f, actuals, ann) ->
-      let (Var fn, insF, funsF) = lower f in
+      let (expF, insF, funsF) = lower f in
+      let fn = (match expF with
+                | Var fn -> fn
+                | _ -> raise @@ BugInLowering "Fun did not return Var")
+      in
       let loweredActuals = List.map lower actuals in
       let expActuals = List.map (fun (e, _, _) -> e) loweredActuals in
       let insActuals =
