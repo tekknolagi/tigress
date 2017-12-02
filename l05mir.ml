@@ -174,6 +174,6 @@ let rec lower : Types.renamed A.exp -> funrep list =
     f @ [
       Fun ({
         fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
-        impl = i @ [ Ret e];
+        impl = i @ [ Ret e ];
       })
     ]
