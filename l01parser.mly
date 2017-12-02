@@ -101,10 +101,13 @@ vardecl:
 
 funkw: KFun | KLam { } ;
 
+%inline funargs:
+| OOpenParen separated_list(OComma, vardecl) OClosedParen { $2 }
+;
+
 %inline funexp:
-| funkw OOpenParen separated_list(OComma, vardecl) OClosedParen OColon ty
-OEquals exp
-    { L02ast.Fun($3, $6, $8, ()) }
+| funkw funargs OColon ty OEquals exp
+    { L02ast.Fun($2, $4, $6, ()) }
 ;
 
 %inline letexp:
@@ -113,6 +116,10 @@ OEquals exp
 | KLet Ident OEquals funexp KIn exp
       { let ty = tyOfFun $4 in
         L02ast.(Let(($2, ty), $4, $6, ())) }
+| KLet Ident funargs OColon ty OEquals exp KIn exp
+      { let f = L02ast.Fun($3, $5, $7, ()) in
+        let ty = tyOfFun f in
+        L02ast.(Let(($2, ty), f, $9, ())) }
 ;
 
 ty:
