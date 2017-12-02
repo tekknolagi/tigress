@@ -128,7 +128,19 @@ let typed_tests =
   List.map (fun (s,a) -> exp s, a) typed_expressions
 
 
-let renaming_tests = []
+let renaming_expressions =
+  let open AST in
+[
+  "let X:Int = 5 in let X:Int = 4 in X",
+    Let (("X", Types.IntTy), IntLit (5, `Renamed),
+      Let (("__X1", Types.IntTy), IntLit (4, `Renamed),
+        Var ("__X1", `Renamed),
+        `Renamed),
+      `Renamed);
+]
+
+let renaming_tests =
+  List.map (fun (s,a) -> exp s, a) renaming_expressions
 
 
 let eval_expressions =
@@ -200,7 +212,7 @@ let () =
     assert ((_type @@ parse @@ given)=expected)
   in
   let run_renaming_test (given, expected) =
-    assert true
+    assert ((rename @@ _type @@ parse @@ given)=expected)
   in
   let run_eval_test (given, expected) =
     assert ((eval @@ rename @@ _type @@ parse @@ given)=expected)
