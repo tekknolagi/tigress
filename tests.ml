@@ -4,6 +4,7 @@ module AST = L02ast
 module TYP = L03typecheck
 module SCO = L04scoperesolution
 module EVA = L05eval
+module LOW = L05mir
 
 let exp s = s ^ ";"
 let paren s = "(" ^ s ^ ")"
@@ -147,6 +148,29 @@ let eval_tests =
   List.map (fun (s,a) -> exp s, a) eval_expressions
 
 
+(* TODO: Figure out a nicer way to do this. *)
+let lower_expressions =
+  let open AST in
+  let open LOW in
+[
+  "1", [Fun ({
+          fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
+          impl = [ Ret (Imm 1) ];
+        })];
+  "1+2", [Fun ({
+          fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
+          impl = [ Ret (Binop (Math Plus, Imm 1, Imm 2)) ];
+        })];
+  "1<2", [Fun ({
+          fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
+          impl = [ Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ];
+        })];
+]
+
+let lower_tests =
+  List.map (fun (s,a) -> exp s, a) lower_expressions
+
+
 exception DidNotParse of string
 exception ShouldNotHavePassed of string
 
@@ -159,6 +183,7 @@ let () =
   let _type = TYP.typecheck [] in
   let rename = SCO.rename [] in
   let eval  = EVA.eval [] in
+  let lower = LOW.lower in
 
   let run_parse_test (given, expected) = assert ((parse given)=expected) in
   let run_typesafe_test given = ignore @@ _type @@ parse given in
@@ -174,6 +199,9 @@ let () =
   in
   let run_eval_test (given, expected) =
     assert ((eval @@ rename @@ _type @@ parse @@ given)=expected)
+  in
+  let run_lower_test (given, expected) =
+    assert ((lower @@ rename @@ _type @@ parse @@ given)=expected)
   in
 
   let indent s = print_string @@ "  " ^ s in
@@ -191,6 +219,7 @@ let () =
     run_test_suite "type annotation" run_typed_test typed_tests;
     run_test_suite "renaming" run_renaming_test renaming_tests;
     run_test_suite "eval" run_eval_test eval_tests;
+    run_test_suite "lower" run_lower_test lower_tests;
 
     print_endline "All tests passed.";
   )

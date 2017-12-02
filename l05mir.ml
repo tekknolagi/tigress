@@ -115,16 +115,13 @@ let rec lower : Types.renamed A.exp -> funrep list =
       let endOfBlock = genLabel "endOfBlock" in
 
       ( Var ifOutputVar,
-        insCond @
-        [ Cjump (A.Equals, expCond, Imm 0, falseBranch); ] @
-        insT @
-        [
+        insCond @ [
+          Cjump (A.Equals, expCond, Imm 0, falseBranch);
+        ] @ insT @ [
           Move (Var ifOutputVar, expT);
           Jump endOfBlock;
           Label falseBranch;
-        ] @
-        insF @
-        [
+        ] @ insF @ [
           Move (Var ifOutputVar, expF);
           Label endOfBlock;
         ],
