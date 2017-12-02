@@ -65,8 +65,6 @@ let string_of_funrep = function
       ) ^ "):\n  " ^
       String.concat "\n  " @@ List.map string_of_inst insts
 
-exception Unimplemented
-
 let labelCounter = ref []
 let genLabel s =
   "__" ^ match L.assoc_opt s !labelCounter with
