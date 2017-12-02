@@ -69,16 +69,27 @@ exception Unimplemented
 
 let labelCounter = ref []
 let genLabel s =
-  match L.assoc_opt s !labelCounter with
+  "__" ^ match L.assoc_opt s !labelCounter with
   | Some c ->
-      let l = "__" ^ s ^ (string_of_int c) in
+      let l = s ^ string_of_int c in
       labelCounter := (s, c+1):: !labelCounter;
       l
   | None ->
       labelCounter := (s, 1):: !labelCounter;
       s
 
-let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
+let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
+  let gen_fundecl name formals ty body =
+    let (expBody, insBody, funsBody) = lower body in
+    let resultVariable = genLabel "result" in
+    let insBody' = insBody @ [ Move (Var resultVariable, expBody) ] in
+    let n = match name with
+            | Some n -> n
+            | None -> genLabel "lambda"
+    in
+    (n, funsBody @ [Fun ({ fundecl = (n, formals, ty); impl = insBody'; })])
+  in
+  function
   | A.BoolLit (true, _) -> (Imm 1, [], [])
   | A.BoolLit (false, _) -> (Imm 0, [], [])
   | A.IntLit (i, _) -> (Imm i, [], [])
@@ -127,18 +138,11 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       (Unop (Not, loweredE), instsE, funsE)
 
   | A.Fun (formals, ty, body, _) ->
-      let generatedName = genLabel "__lambda" in
-      let (expBody, insBody, funsBody) = lower body in
-      ( Var generatedName,
-        [],
-        [ Fun ({
-            fundecl = (generatedName, formals, ty);
-            impl = insBody;
-          })
-        ] )
+      let (n, funsBody) = gen_fundecl None formals ty body in
+      ( Var n, [], funsBody)
 
-  | A.App ((A.Var (fn, _)) (* as f *), actuals, ann) ->
-      (* let (expF, insF, funsF) = lower f in *)
+  | A.App (f, actuals, ann) ->
+      let (Var fn, insF, funsF) = lower f in
       let loweredActuals = List.map lower actuals in
       let expActuals = List.map (fun (e, _, _) -> e) loweredActuals in
       let insActuals =
@@ -149,24 +153,15 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       in
       let resultVariable = genLabel "result" in
       ( Var resultVariable,
-        insActuals @ [
+        insF @ insActuals @ [
           Call (fn, resultVariable, expActuals);
         ],
-        funActuals )
+        funsF @ funActuals )
 
-  (* | Fun of (vardecl list * ty * 'a exp * 'a) *)
-  | A.Let ((n, _), (A.Fun (formals, ty, funBody, ann) as f), body, _) ->
+  | A.Let ((n, _), A.Fun (formals, ty, funBody, _), body, _) ->
+      let (_, funsFunBody) = gen_fundecl (Some n) formals ty funBody in
       let (expBody, insBody, funsBody) = lower body in
-      let (_expFunBody, insFunBody, funsFunBody) = lower f in
-      (expBody,
-       insBody,
-       funsFunBody @ [
-        Fun ({
-          fundecl = (n, formals, ty);
-          impl = insFunBody;
-        })
-      ] @ funsBody
-        )
+      (expBody, insBody, funsFunBody @ funsBody)
 
   | A.Let ((n, _), e, body, _) ->
       let (expE, insE, funsE) = lower e in
