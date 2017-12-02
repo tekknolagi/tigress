@@ -160,8 +160,16 @@ let lower_expressions =
   in
 [
   "1", [gen_main [Ret (Imm 1)]];
+  "true", [gen_main [Ret (Imm 1)]];
+  "false", [gen_main [Ret (Imm 0)]];
+  "()", [gen_main [Ret Empty]];
+  "some_atom", [gen_main [Ret (String "some_atom")]];
   "1+2", [gen_main [ Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
   "1<2", [gen_main [ Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
+  "let X:Int = 5 in X", [gen_main [
+    Move (Var "X", Imm 5);
+    Ret (Var "X");
+  ]];
 ]
 
 let lower_tests =
