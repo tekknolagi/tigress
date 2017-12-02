@@ -152,19 +152,16 @@ let eval_tests =
 let lower_expressions =
   let open AST in
   let open LOW in
+  let gen_main ins =
+    Fun ({
+      fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
+      impl = ins;
+    })
+  in
 [
-  "1", [Fun ({
-          fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
-          impl = [ Ret (Imm 1) ];
-        })];
-  "1+2", [Fun ({
-          fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
-          impl = [ Ret (Binop (Math Plus, Imm 1, Imm 2)) ];
-        })];
-  "1<2", [Fun ({
-          fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
-          impl = [ Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ];
-        })];
+  "1", [gen_main [Ret (Imm 1)]];
+  "1+2", [gen_main [ Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
+  "1<2", [gen_main [ Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
 ]
 
 let lower_tests =
