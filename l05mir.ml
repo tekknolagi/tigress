@@ -81,8 +81,7 @@ let genLabel s =
 let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
   let gen_fundecl name formals ty body =
     let (expBody, insBody, funsBody) = lower body in
-    let resultVariable = genLabel "result" in
-    let insBody' = insBody @ [ Move (Var resultVariable, expBody) ] in
+    let insBody' = insBody @ [ Ret expBody ] in
     let n = match name with
             | Some n -> n
             | None -> genLabel "lambda"
