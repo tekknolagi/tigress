@@ -30,7 +30,7 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       let tyN =
         try List.assoc n varenv
         with Not_found ->
-          raise @@ TypeError ("Udeclared variable `" ^ n ^ "'")
+          raise @@ TypeError ("Undeclared variable `" ^ n ^ "'")
       in Var (n, tyN)
   | Mathop (op, e1, e2, _) ->
       let opStr = List.assoc op [Plus,"+"; Minus,"-"; Times,"*"; Divide,"/"] in
@@ -88,4 +88,4 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
           if typesOfActuals <> typesOfFormals
           then tyMismatch "apply" (tyOf tyF) (FunTy (typesOfActuals, retTy))
           else App (tyF, typedActuals, retTy)
-      | _ -> raise @@ TypeError "non-function applied to arguments")
+      | _ -> raise @@ TypeError "Non-function applied to arguments")
