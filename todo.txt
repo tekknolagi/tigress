@@ -1,0 +1,7 @@
+* Closure conversion
+* Type inference
+* X86 codegen (no register allocation)
+* X86 codegen (simple register allocation)
+* Modular codegen
+* BIFs
+* C basis
