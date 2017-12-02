@@ -78,17 +78,16 @@ let genLabel s =
 
 exception BugInLowering of string
 
-let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
-  let gen_fundecl name formals ty body =
-    let (expBody, insBody, funsBody) = lower body in
+let rec lower : Types.renamed A.exp -> funrep list =
+  let rec gen_fundecl name formals ty body =
+    let (expBody, insBody, funsBody) = lo body in
     let insBody' = insBody @ [ Ret expBody ] in
     let n = match name with
             | Some n -> n
             | None -> genLabel "lambda"
     in
     (n, funsBody @ [Fun ({ fundecl = (n, formals, ty); impl = insBody'; })])
-  in
-  function
+  and lo : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.BoolLit (true, _) -> (Imm 1, [], [])
   | A.BoolLit (false, _) -> (Imm 0, [], [])
   | A.IntLit (i, _) -> (Imm i, [], [])
@@ -97,19 +96,19 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
   | A.Var (n, _) -> (Var n, [], [])
 
   | A.Mathop (op, l, r, _) ->
-      let (expL, insL, funsL) = lower l in
-      let (expR, insR, funsR) = lower r in
+      let (expL, insL, funsL) = lo l in
+      let (expR, insR, funsR) = lo r in
       (Binop (Math op, expL, expR), insL @ insR, funsL @ funsR)
   | A.Cmpop (op, l, r, _) ->
       (* TODO: add special cases for and/or *)
-      let (expL, insL, funsL) = lower l in
-      let (expR, insR, funsR) = lower r in
+      let (expL, insL, funsL) = lo l in
+      let (expR, insR, funsR) = lo r in
       (Binop (Cmp op, expL, expR), insL @ insR, funsL @ funsR)
 
   | A.IfElse (cond, ift, iff, _) ->
-      let (expCond, insCond, funsCond) = lower cond in
-      let (expT, insT, funsT) = lower ift in
-      let (expF, insF, funsF) = lower iff in
+      let (expCond, insCond, funsCond) = lo cond in
+      let (expT, insT, funsT) = lo ift in
+      let (expF, insF, funsF) = lo iff in
 
       let ifOutputVar = genLabel "outputVar" in
       let falseBranch = genLabel "falseBranch" in
@@ -133,7 +132,7 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
       )
 
   | A.Not (e, _) ->
-      let (loweredE, instsE, funsE) = lower e in
+      let (loweredE, instsE, funsE) = lo e in
       (Unop (Not, loweredE), instsE, funsE)
 
   | A.Fun (formals, ty, body, _) ->
@@ -141,12 +140,12 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
       ( Var n, [], funsBody)
 
   | A.App (f, actuals, ann) ->
-      let (expF, insF, funsF) = lower f in
+      let (expF, insF, funsF) = lo f in
       let fn = (match expF with
                 | Var fn -> fn
                 | _ -> raise @@ BugInLowering "Fun did not return Var")
       in
-      let loweredActuals = List.map lower actuals in
+      let loweredActuals = List.map lo actuals in
       let expActuals = List.map (fun (e, _, _) -> e) loweredActuals in
       let insActuals =
         List.concat @@ List.map (fun (_, i, _) -> i) loweredActuals
@@ -163,10 +162,18 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list =
 
   | A.Let ((n, _), A.Fun (formals, ty, funBody, _), body, _) ->
       let (_, funsFunBody) = gen_fundecl (Some n) formals ty funBody in
-      let (expBody, insBody, funsBody) = lower body in
+      let (expBody, insBody, funsBody) = lo body in
       (expBody, insBody, funsFunBody @ funsBody)
 
   | A.Let ((n, _), e, body, _) ->
-      let (expE, insE, funsE) = lower e in
-      let (expBody, insBody, funsBody) = lower body in
+      let (expE, insE, funsE) = lo e in
+      let (expBody, insBody, funsBody) = lo body in
       (expBody, insE @ [ Move (Var n, expE) ] @ insBody, funsE @ funsBody)
+  in fun exp ->
+    let (e, i, f) = lo exp in
+    f @ [
+      Fun ({
+        fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
+        impl = i @ [ Ret e];
+      })
+    ]
