@@ -42,6 +42,16 @@ let rec typecheck varenv (exp : unit exp) : ty exp =
       let (t1, t2) = (ty e1, ty e2) in
       if tyOf t1 <> tyOf t2 then tyMismatch "=" (tyOf t1) (tyOf t2);
       Cmpop (Equals, t1, t2, BoolTy)
+  | Cmpop (And, e1, e2, _) ->
+      let (t1, t2) = (ty e1, ty e2) in
+      (match (tyOf t1, tyOf t2) with
+      | (BoolTy, BoolTy) -> Cmpop (And, t1, t2, BoolTy)
+      | (BoolTy, q) | (q, BoolTy) | (q, _) -> tyMismatch "and" BoolTy q)
+  | Cmpop (Or, e1, e2, _) ->
+      let (t1, t2) = (ty e1, ty e2) in
+      (match (tyOf t1, tyOf t2) with
+      | (BoolTy, BoolTy) -> Cmpop (Or, t1, t2, BoolTy)
+      | (BoolTy, q) | (q, BoolTy) | (q, _) -> tyMismatch "or" BoolTy q)
   | Cmpop (op, e1, e2, _) ->
       let opStr = List.assoc op [Lt,"<"; Lte,"<="; Gt,">"; Gte,">="] in
       let (t1, t2) = (ty e1, ty e2) in

@@ -31,6 +31,14 @@ let rec eval (varenv : (renamed value ref) env) (exp : renamed L02ast.exp) =
         let opfn = List.assoc op [Plus, (+); Minus, (-); Times, ( * )] in
         let (IntVal v1, IntVal v2) = (ev e1, ev e2) in IntVal (opfn v1 v2)
     | Cmpop (Equals, e1, e2, _) -> BoolVal ((ev e1)=(ev e2))
+    | Cmpop (And, e1, e2, _) ->
+        let BoolVal v1 = ev e1 in
+        if v1 then ev e2
+        else BoolVal v1
+    | Cmpop (Or, e1, e2, _) ->
+        let BoolVal v1 = ev e1 in
+        if not v1 then ev e2
+        else BoolVal v1
     | Cmpop (op, e1, e2, _) ->
         let opfn = List.assoc op [Lt, (<); Lte, (<=); Gt, (>); Gte, (>=)] in
         let (IntVal v1, IntVal v2) = (ev e1, ev e2) in BoolVal (opfn v1 v2)

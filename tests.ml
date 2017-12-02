@@ -41,6 +41,10 @@ let parse_expressions =
   "1>=2", Cmpop (Gte, i 1, i 2, ());
   "1<>2", Not (Cmpop (Equals, i 1, i 2, ()), ());
   "1+2 < 3", Cmpop (Lt, Mathop (Plus, i 1, i 2, ()), i 3, ());
+  "1 < 2 and 3 < 4", Cmpop (And, (Cmpop (Lt, i 1, i 2, ())),
+                                 (Cmpop (Lt, i 3, i 4, ())), ());
+  "1 < 2 or 3 < 4", Cmpop (Or, (Cmpop (Lt, i 1, i 2, ())),
+                               (Cmpop (Lt, i 3, i 4, ())), ());
   "1 + (2 < 3)", Mathop (Plus, i 1, Cmpop (Lt, i 2, i 3, ()), ());
   "if 3 then 4 else 5", IfElse (i 3, i 4, i 5, ());
   "if 5 < 6 then 4 else 5", IfElse (Cmpop (Lt, i 5, i 6, ()), i 4, i 5, ());
@@ -148,6 +152,10 @@ let eval_expressions =
 [
   "1", IntVal 1;
   "1 + 2", IntVal 3;
+  "true", BoolVal true;
+  "false", BoolVal false;
+  "true and false", BoolVal false;
+  "true or false", BoolVal true;
   "let Fact = \\(X:Int):Int = " ^
   "  if X < 2 then 1 else X*Fact(X-1)" ^
   "in Fact(5)", IntVal 120;

@@ -39,6 +39,8 @@ rule token = parse
 | "fun"           { KFun }
 | "\\"            { KLam }
 | ";"             { KSemi }
+| "and"           { KAnd }
+| "or"            { KOr }
 
 (*
 | "nil"           { KNil }

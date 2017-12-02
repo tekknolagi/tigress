@@ -16,6 +16,7 @@
 %token OOpenParen OClosedParen
 %token KIf KThen KElse KEnd
 %token KLet KIn KFun KLam KSemi
+%token KAnd KOr
 %token<int> TInt
 %token<bool> TBool
 %token<string> TAtom
@@ -25,6 +26,7 @@
 %left KLet
 %left KIf
 %left KFun
+%left KAnd KOr
 %left OLt OGt
 %left OLte OGte
 %left OPlus OMinus /* lowest precedence */
@@ -67,7 +69,8 @@ OPlus { Plus } | OMinus { Minus } | OStar { Times } | ODivide { Divide }
 ;
 
 %inline cmpop:
-OEquals { Equals } | OLt { Lt } | OLte { Lte } | OGt { Gt } | OGte { Gte }
+| OEquals { Equals } | OLt { Lt } | OLte { Lte } | OGt { Gt } | OGte { Gte }
+| KAnd { And } | KOr { Or }
 ;
 
 boollit:

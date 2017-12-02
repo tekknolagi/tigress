@@ -18,7 +18,7 @@ type 'a exp =
   | App of ('a exp * 'a exp list * 'a)
 
 and mathop = Plus | Minus | Times | Divide
-and cmpop = Equals | Lt | Lte | Gt | Gte
+and cmpop = Equals | Lt | Lte | Gt | Gte | And | Or
 
 and vardecl = name * ty
 and name = string
@@ -48,7 +48,8 @@ let rec string_of_aexp f exp =
     List.assoc o [Plus,"Plus"; Minus,"Minus"; Times,"Times"; Divide,"Divide"]
   in
   let string_of_cmpop o =
-    List.assoc o [Lt,"Lt"; Lte,"Lte"; Gt,"Gt"; Gte,"Gte"; Equals,"Equals"]
+    List.assoc o [Lt,"Lt"; Lte,"Lte"; Gt,"Gt"; Gte,"Gte"; Equals,"Equals";
+    And,"And"; Or,"Or"]
   in
   match exp with
   | BoolLit (b, a) -> "BoolLit " ^ string_of_bool b ^ ann a

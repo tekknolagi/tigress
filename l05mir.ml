@@ -99,8 +99,11 @@ let rec lower : Types.renamed A.exp -> funrep list =
       let (expL, insL, funsL) = lo l in
       let (expR, insR, funsR) = lo r in
       (Binop (Math op, expL, expR), insL @ insR, funsL @ funsR)
+  | A.Cmpop (A.And, l, r, _) ->
+      lo @@ A.IfElse (l, r, (A.BoolLit (false, `Renamed)), `Renamed)
+  | A.Cmpop (A.Or, l, r, _) ->
+      lo @@ A.IfElse (l, (A.BoolLit (true, `Renamed)), r, `Renamed)
   | A.Cmpop (op, l, r, _) ->
-      (* TODO: add special cases for and/or *)
       let (expL, insL, funsL) = lo l in
       let (expR, insR, funsR) = lo r in
       (Binop (Cmp op, expL, expR), insL @ insR, funsL @ funsR)
@@ -109,11 +112,9 @@ let rec lower : Types.renamed A.exp -> funrep list =
       let (expCond, insCond, funsCond) = lo cond in
       let (expT, insT, funsT) = lo ift in
       let (expF, insF, funsF) = lo iff in
-
       let ifOutputVar = genLabel "outputVar" in
       let falseBranch = genLabel "falseBranch" in
       let endOfBlock = genLabel "endOfBlock" in
-
       ( Var ifOutputVar,
         insCond @ [
           Cjump (A.Equals, expCond, Imm 0, falseBranch);
@@ -152,9 +153,7 @@ let rec lower : Types.renamed A.exp -> funrep list =
       in
       let resultVariable = genLabel "result" in
       ( Var resultVariable,
-        insF @ insActuals @ [
-          Call (fn, resultVariable, expActuals);
-        ],
+        insF @ insActuals @ [ Call (fn, resultVariable, expActuals); ],
         funsF @ funActuals )
 
   | A.Let ((n, _), A.Fun (formals, ty, funBody, _), body, _) ->
@@ -166,6 +165,7 @@ let rec lower : Types.renamed A.exp -> funrep list =
       let (expE, insE, funsE) = lo e in
       let (expBody, insBody, funsBody) = lo body in
       (expBody, insE @ [ Move (Var n, expE) ] @ insBody, funsE @ funsBody)
+
   in fun exp ->
     let (e, i, f) = lo exp in
     f @ [
