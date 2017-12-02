@@ -9,7 +9,7 @@ type inst =
   | Call of symbol * symbol * tree list
   | Ret of tree
   | Jump of symbol
-  (*         op,     L,     R,     location *)
+  (*         op,       L,     R,     location *)
   | Cjump of A.cmpop * tree * tree * symbol
 
 and tree =
@@ -19,15 +19,13 @@ and tree =
   | Mem of tree
   | Var of symbol
   (*         op,   e  *)
-  (*
   | Unop of unop * tree
-  *)
-  (*         op,        L,     R    *)
+  (*         op,     L,     R    *)
   | Binop of binop * tree * tree
   | Empty
 
 and binop = Math of A.mathop | Cmp of A.cmpop
-and unop = Not | Neg
+and unop = Not
 and symbol = string
 
 let rec string_of_inst = function
@@ -48,12 +46,10 @@ and string_of_tree = function
   | String s -> "@" ^ s
   | Mem t -> "*(" ^ string_of_tree t ^ ")"
   | Var s -> "V:" ^ s
-  (*
   | Unop (o, e) -> string_of_unop o ^ "(" ^ string_of_tree e ^ ")"
-  *)
   | Binop (o, l, r) ->
       string_of_tree l ^ " "  ^ string_of_binop o ^ " " ^ string_of_tree r
-and string_of_unop = function | Not -> "!" | Neg -> "-"
+and string_of_unop = function | Not -> "!"
 and string_of_binop = let open A in function
   | Math m -> List.assoc m [Plus,"+"; Minus,"-"; Times,"*"; Divide,"/"]
   | Cmp  c -> List.assoc c [Equals,"=="; Lt,"<"; Lte,"<="; Gt,">"; Gte,">="]
@@ -126,11 +122,9 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
         funsCond @ funsT @ funsF
       )
 
-      (*
   | A.Not (e, _) ->
       let (loweredE, instsE, funsE) = lower e in
       (Unop (Not, loweredE), instsE, funsE)
-      *)
 
   | A.Fun (formals, ty, body, ann) ->
       lower body
