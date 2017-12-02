@@ -126,8 +126,16 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       let (loweredE, instsE, funsE) = lower e in
       (Unop (Not, loweredE), instsE, funsE)
 
-  | A.Fun (_formals, _ty, body, _ann) ->
-      lower body
+  | A.Fun (formals, ty, body, _) ->
+      let generatedName = genLabel "__lambda" in
+      let (expBody, insBody, funsBody) = lower body in
+      ( Var generatedName,
+        [],
+        [ Fun ({
+            fundecl = (generatedName, formals, ty);
+            impl = insBody;
+          })
+        ] )
 
   | A.App ((A.Var (fn, _)) (* as f *), actuals, ann) ->
       (* let (expF, insF, funsF) = lower f in *)
