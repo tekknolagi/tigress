@@ -126,11 +126,11 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       let (loweredE, instsE, funsE) = lower e in
       (Unop (Not, loweredE), instsE, funsE)
 
-  | A.Fun (formals, ty, body, ann) ->
+  | A.Fun (_formals, _ty, body, _ann) ->
       lower body
 
-  | A.App ((Var (fn, _)) as f, actuals, ann) ->
-      let (expF, insF, funsF) = lower f in
+  | A.App ((A.Var (fn, _)) (* as f *), actuals, ann) ->
+      (* let (expF, insF, funsF) = lower f in *)
       let loweredActuals = List.map lower actuals in
       let expActuals = List.map (fun (e, _, _) -> e) loweredActuals in
       let insActuals =
@@ -139,7 +139,7 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
       let funActuals =
         List.concat @@ List.map (fun (_, _, f) -> f) loweredActuals
       in
-      let resultVariable = genLabel "return" in
+      let resultVariable = genLabel "result" in
       ( Var resultVariable,
         insActuals @ [
           Call (fn, resultVariable, expActuals);
@@ -148,20 +148,17 @@ let rec lower : Types.renamed A.exp -> tree * inst list * funrep list = function
 
   (* | Fun of (vardecl list * ty * 'a exp * 'a) *)
   | A.Let ((n, _), (A.Fun (formals, ty, funBody, ann) as f), body, _) ->
-      let (_expBody, insBody, funsBody) = lower body in
+      let (expBody, insBody, funsBody) = lower body in
       let (_expFunBody, insFunBody, funsFunBody) = lower f in
-      (Empty, [], funsBody @ funsFunBody @ [
+      (expBody,
+       insBody,
+       funsFunBody @ [
         Fun ({
           fundecl = (n, formals, ty);
           impl = insFunBody;
         })
-      ])
-
-      (*
-      let (expE, insE, funsE) = lower e in
-      let (expBody, insBody, funsBody) = lower body in
-      (expBody, insE @ [ Move (Var n, expE) ] @ insBody, funsE @ funsBody)
-      *)
+      ] @ funsBody
+        )
 
   | A.Let ((n, _), e, body, _) ->
       let (expE, insE, funsE) = lower e in

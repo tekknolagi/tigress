@@ -19,11 +19,13 @@ let _ =
           let funsString =
             String.concat "\n" @@ List.map L05mir.string_of_funrep funs
           in
-          print_endline "----------";
+          print_endline "----------\nfunctions:";
           print_endline funsString;
           print_newline ();
+          print_endline "main:";
           print_endline instructionsString;
           print_newline ();
+          print_endline "tree:";
           print_endline treeString;
           print_endline "----------";
           print_newline ();
