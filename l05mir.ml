@@ -135,7 +135,7 @@ let rec lower : Types.renamed A.exp -> funrep list =
 
   | A.Fun (formals, ty, body, _) ->
       let (n, funsBody) = gen_fundecl None formals ty body in
-      ( Var n, [], funsBody)
+      (Var n, [], funsBody)
 
   | A.App (f, actuals, ann) ->
       let (expF, insF, funsF) = lo f in

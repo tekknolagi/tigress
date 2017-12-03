@@ -54,12 +54,17 @@ let _ =
         let low = L05mir.lower ren in
         if mode=Lower
         then String.concat "\n" @@ List.map L05mir.string_of_funrep low
+        else
+        let x86 = L06codegen.generateProgram low in
+        if mode=Codegen
+        then L06codegen.string_of_program x86
         else raise @@ BugInREPL "Invalid mode"
         in
         print_endline to_print
       with
       | Failure _ -> exit 0
       | e -> ( print_endline @@ Printexc.to_string e;
+               Printexc.print_backtrace stdout;
                flush stdout )
     done
   with L00lexer.Eof ->
