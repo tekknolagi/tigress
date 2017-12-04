@@ -182,10 +182,43 @@ and generateRegister = function
   | (LOW.Unop (LOW.Not, r), reg) -> raise NotImplemented
 
 and generateFun ((LOW.Fun ({ LOW.fundecl = fundecl; LOW.impl = ins })) as mirfun) =
-  (* List.concat? *)
-  (* let x64ins = List.fold_right (@) [] (List.map generateIns ins) in *)
+  let (_, formals, _)  = fundecl in
+  let allVars = (List.map fst formals) @ varsInInsList ins in
+  let numVars = List.length allVars in
+  let sizeOfInt = 8 in
+  let stackSpace = numVars * sizeOfInt in
+  print_endline @@ "vars: " ^ String.concat ", " allVars;
   let x64ins = List.concat @@ List.map generateIns ins in
   Fun ({ mirfun = mirfun; impl = x64ins })
+
+and varsInInsList ins =
+  let open LOW in
+  let rec varsInTree = function
+    | Mem t -> varsInTree t
+    | Var s -> [s]
+    | Unop (_, t) -> varsInTree t
+    | Binop (_, t1, t2) -> List.concat @@ List.map varsInTree [t1; t2]
+    | _ -> []
+  in
+  let varsInInst = function
+    | Move (t1, t2) -> List.concat @@ List.map varsInTree [t1; t2]
+    | Call (_, res, args) -> res :: (List.concat @@ List.map varsInTree args)
+    | Ret t -> varsInTree t
+    | Cjump (_, t1, t2, _) -> List.concat @@ List.map varsInTree [t1; t2]
+    | _ -> []
+  in uniq @@ List.concat @@ List.map varsInInst ins
+
+and uniq l =
+  let open List in
+  let tbl = Hashtbl.create (length l) in
+  let f l e = 
+    try 
+      let _ = Hashtbl.find tbl e in l
+    with
+    | Not_found -> 
+      Hashtbl.add tbl e ();
+      e::l
+  in List.rev (List.fold_left f [] l)
 
 let generateProgram = List.map generateFun
 
