@@ -171,7 +171,7 @@ and generateRegister = function
   ]
   | (LOW.Mem t, reg) -> raise @@ InternalError "No register for mem"
   | (LOW.Var s, reg) -> raise NotImplemented
-  | (LOW.Binop (Math binop, t1, t2), reg) ->
+  | (LOW.Binop (LOW.Math binop, t1, t2), reg) ->
       let t1ops = generateRegister (t1, reg) in
       let t2ops = generateRegister (t2, reg) in
       t1ops @ [
