@@ -7,6 +7,7 @@ type inst =
   | Move of tree * tree
   (*        funname, result variable, args *)
   | Call of symbol * symbol * tree list
+  | Enter
   | Ret of tree
   | Jump of symbol
   (*         op,       L,     R,     location *)
@@ -29,23 +30,25 @@ and unop = Not
 and symbol = string
 
 let rec string_of_inst = function
-  | Label s -> "L:" ^ s
-  | Move (dst, src) -> "(" ^ string_of_tree dst ^ ") <- " ^ string_of_tree src
+  | Label s -> s ^ ":"
+  | Move (Var dst, src) -> "  " ^ dst ^ " <- " ^ string_of_tree src
+  | Move (dst, src) -> "  (" ^ string_of_tree dst ^ ") <- " ^ string_of_tree src
   | Call (f, res, args) ->
-      string_of_tree (Var res) ^ " <- " ^ f ^ "(" ^
+      "  " ^ string_of_tree (Var res) ^ " <- " ^ f ^ "(" ^
       (String.concat ", " @@ List.map string_of_tree args) ^ ")"
-  | Ret v -> "ret " ^ string_of_tree v
-  | Jump l -> "jump " ^ l
+  | Enter -> "enter"
+  | Ret v -> "  ret " ^ string_of_tree v
+  | Jump l -> "  jump " ^ l
   | Cjump (o, l, r, loc) ->
       "if (" ^ string_of_tree l ^ " " ^ string_of_binop (Cmp o) ^ " "
-      ^ string_of_tree r ^ ") " ^ string_of_inst (Jump loc)
+      ^ string_of_tree r ^ ")" ^ string_of_inst (Jump loc)
 and string_of_tree = function
   | Empty -> "Nop"
   | Imm i -> "$" ^ string_of_int i
   | Offset s -> s
   | String s -> "@" ^ s
   | Mem t -> "*(" ^ string_of_tree t ^ ")"
-  | Var s -> "V:" ^ s
+  | Var s -> s
   | Unop (o, e) -> string_of_unop o ^ "(" ^ string_of_tree e ^ ")"
   | Binop (o, l, r) ->
       string_of_tree l ^ " "  ^ string_of_binop o ^ " " ^ string_of_tree r
@@ -63,11 +66,11 @@ let string_of_funrep = function
       "function " ^ name ^ "(" ^ (
         String.concat ", " @@ List.map A.string_of_vardecl formals
       ) ^ "):\n  " ^
-      String.concat "\n  " @@ List.map string_of_inst insts
+      (String.concat "\n" @@ List.map string_of_inst insts) ^ "\n"
 
 let labelCounter = ref []
 let genLabel s =
-  "__" ^ match L.assoc_opt s !labelCounter with
+  "." ^ match L.assoc_opt s !labelCounter with
   | Some c ->
       let l = s ^ string_of_int c in
       labelCounter := (s, c+1):: !labelCounter;
@@ -76,12 +79,23 @@ let genLabel s =
       labelCounter := (s, 1):: !labelCounter;
       s
 
+let variableCounter = ref []
+let genVariable s =
+  "__" ^ match L.assoc_opt s !variableCounter with
+  | Some c ->
+      let l = s ^ string_of_int c in
+      variableCounter := (s, c+1):: !variableCounter;
+      l
+  | None ->
+      variableCounter := (s, 1):: !variableCounter;
+      s
+
 exception BugInLowering of string
 
 let rec lower : Types.renamed A.exp -> funrep list =
   let rec gen_fundecl name formals ty body =
     let (expBody, insBody, funsBody) = lo body in
-    let insBody' = insBody @ [ Ret expBody ] in
+    let insBody' = [ Enter ] @ insBody @ [ Ret expBody ] in
     let n = match name with
             | Some n -> n
             | None -> genLabel "lambda"
@@ -112,7 +126,7 @@ let rec lower : Types.renamed A.exp -> funrep list =
       let (expCond, insCond, funsCond) = lo cond in
       let (expT, insT, funsT) = lo ift in
       let (expF, insF, funsF) = lo iff in
-      let ifOutputVar = genLabel "outputVar" in
+      let ifOutputVar = genVariable "outputVar" in
       let falseBranch = genLabel "falseBranch" in
       let endOfBlock = genLabel "endOfBlock" in
       ( Var ifOutputVar,
@@ -151,7 +165,7 @@ let rec lower : Types.renamed A.exp -> funrep list =
       let funActuals =
         List.concat @@ List.map (fun (_, _, f) -> f) loweredActuals
       in
-      let resultVariable = genLabel "result" in
+      let resultVariable = genVariable "result" in
       ( Var resultVariable,
         insF @ insActuals @ [ Call (fn, resultVariable, expActuals); ],
         funsF @ funActuals )
@@ -168,9 +182,4 @@ let rec lower : Types.renamed A.exp -> funrep list =
 
   in fun exp ->
     let (e, i, f) = lo exp in
-    f @ [
-      Fun ({
-        fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
-        impl = i @ [ Ret e ];
-      })
-    ]
+    f @ snd @@ gen_fundecl (Some "main") [] Types.(FunTy ([], UnitTy)) exp

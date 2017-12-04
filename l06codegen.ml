@@ -1,3 +1,7 @@
+(*
+http://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html
+*)
+
 module LOW = L05mir
 
 type symbol = string
@@ -112,9 +116,9 @@ let string_of_ins =
   | Jle l       -> "  jle " ^ l
   | Label l     -> l ^ ":"
   | Call f      -> "  call  " ^ f
-  | Leave       -> "leaveq"
-  | Ret         -> "ret"
-  | Comment s   -> "  % " ^ s
+  | Leave       -> "  leaveq"
+  | Ret         -> "  ret"
+  | Comment s   -> "  /* " ^ s ^ " */"
 
 
 type x64funrec = { mirfun : LOW.funrep; impl : x64ins list }
@@ -130,27 +134,49 @@ let rec generateIns = function
       let (t1op, t1ins) = generateOperand t1 in
       let (t2op, t2ins) = generateOperand t2 in
       t2ins @ t1ins @ [ Move (t2op, t1op) ]
+  | LOW.Call ("Write", "Q", args) ->
+      (* ssize_t write(int fd, const void *buf, size_t count); *)
+      raise NotImplemented
+  | LOW.Call (f, ret, args) -> raise NotImplemented
+  | LOW.Enter -> [
+    Comment "Enter";
+    Push (Direct rbp);
+    Move (Direct rsp, Direct rbp);
+  ]
   | LOW.Ret r ->
       let (rop, rins) = generateOperand r in
-      rins @ [ Move (rop, Direct rax); Ret ]
+      rins @ [ Move (rop, Direct rax); Leave; Ret ]
+  | LOW.Jump l -> [ Jmp l ]
+  | LOW.Cjump (cmpop, t1, t2, l) -> raise NotImplemented
 
 and generateOperand = function
   | LOW.Imm i -> (Imm i, [])
   | LOW.Offset field -> raise NotImplemented
   | LOW.String s -> (Data s, [])
   | LOW.Mem t -> raise NotImplemented
-  | LOW.Var s -> (Var s, [])
-  | LOW.Binop (binop, t1, t2) -> raise NotImplemented
+  | LOW.Var s -> raise NotImplemented
+      (* (Var s, []) *)
+  | LOW.Unop (op, t1) -> raise NotImplemented
+  | LOW.Binop (binop, t1, t2) ->
+      raise NotImplemented
   | LOW.Empty -> raise NotImplemented
 
 and generateRegister = function
-  | (LOW.Imm i, reg) -> raise NotImplemented
+  | (LOW.Imm i, reg) -> [
+    Move (Imm i, Direct reg)
+  ]
   | (LOW.Offset field, reg) -> raise @@ InternalError "No register for offset"
   | (LOW.String s, reg) -> [
-    Move (Data s, Direct reg)
+    Move (Data s, Direct reg);
   ]
   | (LOW.Mem t, reg) -> raise @@ InternalError "No register for mem"
   | (LOW.Var s, reg) -> raise NotImplemented
+  | (LOW.Binop (Math binop, t1, t2), reg) ->
+      let t1ops = generateRegister (t1, reg) in
+      let t2ops = generateRegister (t2, reg) in
+      t1ops @ [
+        Move (Direct reg, Direct (Virtual "tmp"));
+      ] @ t2ops
   | (LOW.Binop (binop, t1, t2), reg) -> raise NotImplemented
   | (LOW.Empty, reg) -> raise @@ InternalError "Can't generate empty exp"
   | (LOW.Unop (LOW.Not, r), reg) -> raise NotImplemented
@@ -181,7 +207,9 @@ _start:
 _exit:
    movq %rdi, %rax
    movq $60, %rax   /* exit syscall */
-   syscall"
+   syscall
+
+"
 
 let string_of_program funcs =
-  prelude ^ "\n\n" ^ List.fold_right (^) (List.map string_of_fun funcs) ""
+  prelude ^ String.concat "" @@ List.map string_of_fun funcs

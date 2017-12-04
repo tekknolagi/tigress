@@ -156,10 +156,10 @@ let eval_expressions =
   "false", BoolVal false;
   "true and false", BoolVal false;
   "true or false", BoolVal true;
-  "let Fact = \\(X:Int):Int = " ^
+  "let Fact = \\(X:Int):Int =" ^
   "  if X < 2 then 1 else X*Fact(X-1)" ^
   "in Fact(5)", IntVal 120;
-  "let Fact(X:Int):Int = " ^
+  "let Fact(X:Int):Int =" ^
   "  if X < 2 then 1 else X*Fact(X-1)" ^
   "in Fact(5)", IntVal 120;
 ]
@@ -179,14 +179,15 @@ let lower_expressions =
     })
   in
 [
-  "1", [gen_main [Ret (Imm 1)]];
-  "true", [gen_main [Ret (Imm 1)]];
-  "false", [gen_main [Ret (Imm 0)]];
-  "()", [gen_main [Ret Empty]];
-  "some_atom", [gen_main [Ret (String "some_atom")]];
-  "1+2", [gen_main [ Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
-  "1<2", [gen_main [ Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
+  "1", [gen_main [Enter; Ret (Imm 1)]];
+  "true", [gen_main [Enter; Ret (Imm 1)]];
+  "false", [gen_main [Enter; Ret (Imm 0)]];
+  "()", [gen_main [Enter; Ret Empty]];
+  "some_atom", [gen_main [Enter; Ret (String "some_atom")]];
+  "1+2", [gen_main [ Enter; Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
+  "1<2", [gen_main [ Enter; Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
   "let X:Int = 5 in X", [gen_main [
+    Enter;
     Move (Var "X", Imm 5);
     Ret (Var "X");
   ]];

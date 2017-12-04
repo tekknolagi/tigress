@@ -27,7 +27,8 @@ let _ =
     then default_mode
     else mode_of_string Sys.argv.(1)
   in
-  print_endline @@ "REPL in " ^ string_of_mode mode ^ " mode.";
+  if Unix.(isatty stdin) then
+    print_endline @@ "REPL in " ^ string_of_mode mode ^ " mode.";
   try
     let lexbuf = Lexing.from_channel stdin in
     while true do
