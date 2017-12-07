@@ -3,7 +3,7 @@ module A = L02ast
 
 type inst =
   | Label of symbol
-  (*        dst,   src    *)
+  (*        src,   dst   *)
   | Move of tree * tree
   (*        funname, result variable, args *)
   | Call of symbol * symbol * tree list
@@ -31,11 +31,11 @@ and symbol = string
 
 let rec string_of_inst = function
   | Label s -> s ^ ":"
-  | Move (Var dst, src) -> "  " ^ dst ^ " <- " ^ string_of_tree src
-  | Move (dst, src) -> "  (" ^ string_of_tree dst ^ ") <- " ^ string_of_tree src
+  | Move (src, Var dst) -> "  " ^ dst ^ " <- " ^ string_of_tree src
+  | Move (src, dst) -> "  (" ^ string_of_tree dst ^ ") <- " ^ string_of_tree src
   | Call (f, res, args) ->
       "  " ^ string_of_tree (Var res) ^ " <- " ^ f ^ "(" ^
-      (String.concat ", " @@ List.map string_of_tree args) ^ ")"
+      S.map_concat ", " string_of_tree args ^ ")"
   | Enter -> "enter"
   | Ret v -> "  ret " ^ string_of_tree v
   | Jump l -> "  jump " ^ l
@@ -63,10 +63,8 @@ type funrep = Fun of funrec
 
 let string_of_funrep = function
   | Fun ({ fundecl = (name, formals, ty); impl = insts }) ->
-      "function " ^ name ^ "(" ^ (
-        String.concat ", " @@ List.map A.string_of_vardecl formals
-      ) ^ "):\n  " ^
-      (String.concat "\n" @@ List.map string_of_inst insts) ^ "\n"
+      "function " ^ name ^ "(" ^ S.map_concat ", " A.string_of_vardecl formals
+      ^ "):\n  " ^ S.map_concat "\n" string_of_inst insts ^ "\n"
 
 let labelCounter = ref []
 let genLabel s =
@@ -133,11 +131,11 @@ let rec lower : Types.renamed A.exp -> funrep list =
         insCond @ [
           Cjump (A.Equals, expCond, Imm 0, falseBranch);
         ] @ insT @ [
-          Move (Var ifOutputVar, expT);
+          Move (expT, Var ifOutputVar);
           Jump endOfBlock;
           Label falseBranch;
         ] @ insF @ [
-          Move (Var ifOutputVar, expF);
+          Move (expF, Var ifOutputVar);
           Label endOfBlock;
         ],
         funsCond @ funsT @ funsF
@@ -159,12 +157,8 @@ let rec lower : Types.renamed A.exp -> funrep list =
       in
       let loweredActuals = List.map lo actuals in
       let expActuals = List.map (fun (e, _, _) -> e) loweredActuals in
-      let insActuals =
-        List.concat @@ List.map (fun (_, i, _) -> i) loweredActuals
-      in
-      let funActuals =
-        List.concat @@ List.map (fun (_, _, f) -> f) loweredActuals
-      in
+      let insActuals = L.map_concat (fun (_, i, _) -> i) loweredActuals in
+      let funActuals = L.map_concat (fun (_, _, f) -> f) loweredActuals in
       let resultVariable = genVariable "result" in
       ( Var resultVariable,
         insF @ insActuals @ [ Call (fn, resultVariable, expActuals); ],
@@ -178,7 +172,7 @@ let rec lower : Types.renamed A.exp -> funrep list =
   | A.Let ((n, _), e, body, _) ->
       let (expE, insE, funsE) = lo e in
       let (expBody, insBody, funsBody) = lo body in
-      (expBody, insE @ [ Move (Var n, expE) ] @ insBody, funsE @ funsBody)
+      (expBody, insE @ [ Move (expE, Var n) ] @ insBody, funsE @ funsBody)
 
   in fun exp ->
     let (e, i, f) = lo exp in

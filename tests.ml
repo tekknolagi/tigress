@@ -188,7 +188,7 @@ let lower_expressions =
   "1<2", [gen_main [ Enter; Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
   "let X:Int = 5 in X", [gen_main [
     Enter;
-    Move (Var "X", Imm 5);
+    Move (Imm 5, Var "X");
     Ret (Var "X");
   ]];
 ]

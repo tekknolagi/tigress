@@ -1,3 +1,4 @@
+open Common
 open Types
 
 type 'a exp =
@@ -65,8 +66,8 @@ let rec string_of_aexp f exp =
   | Let ((n, _), e, b, a) ->
     "Let (" ^ n ^ ", " ^ toS e ^ ", " ^ toS b ^ ")" ^ ann a
   | Fun (ns, t, b, a) ->
-    "Fun ([" ^ (String.concat ", " @@ List.map string_of_vardecl ns) ^ "]"
+    "Fun ([" ^ (S.map_concat ", " string_of_vardecl ns) ^ "]"
     ^ ", " ^ toS b ^ ")" ^ ann a
   | App (fe, es, a) ->
-    "App (" ^ toS fe ^ ", [" ^ (String.concat ", " @@ List.map toS es) ^ "]"
+    "App (" ^ toS fe ^ ", [" ^ (S.map_concat ", " toS es) ^ "]"
     ^ ")" ^ ann a

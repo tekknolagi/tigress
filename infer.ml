@@ -1,4 +1,4 @@
-open Ast
+open L02ast
 
 (*******************************************************************|
 |**********************   Environment   ****************************|
@@ -11,7 +11,7 @@ open Ast
 module NameMap = Map.Make(String)
 type environment = primitiveType NameMap.t
 
-(* Unknown type,  resolved type. eg.[(T, TNum); (U, TBool)] *)
+(* Unknown type,  resolved type. eg.[(T, TInt); (U, TBool)] *)
 type substitutions = (id * primitiveType) list
 
 let type_variable = ref (Char.code 'a')
@@ -37,7 +37,7 @@ let gen_new_type () =
 |*******************************************************************|
 | - This method takes every expression/sub-expression in the        |
 |   program and assigns some type information to it.                |
-| - This type information maybe something concrete like a TNum      |
+| - This type information maybe something concrete like a TInt      |
 |   or it could be a unique parameterized type(placeholder) such    |
 |   as 'a.                                                          |
 | - Concrete types are usually assigned when you encounter          |
@@ -57,7 +57,7 @@ let gen_new_type () =
 |*******************************************************************)
 let rec annotate_expr (e: expr) (env: environment) : aexpr =
   match e with
-  | NumLit(n) -> ANumLit(n, TNum)
+  | IntLit(n) -> AIntLit(n, TInt)
   | BoolLit(b) -> ABoolLit(b, TBool)
   | Val(x) -> if NameMap.mem x env
     then AVal(x, NameMap.find x env)
@@ -79,7 +79,7 @@ let rec annotate_expr (e: expr) (env: environment) : aexpr =
 (* returns the type of an annotated expression *)
 and type_of (ae: aexpr): primitiveType =
   match ae with
-  | ANumLit(_, t) | ABoolLit(_, t) -> t
+  | AIntLit(_, t) | ABoolLit(_, t) -> t
   | AVal(_, t) -> t
   | ABinop(_, _, _, t) -> t
   | AFun(_, _, t) -> t
@@ -100,7 +100,7 @@ and type_of (ae: aexpr): primitiveType =
 |   is being imposed on the two types.                                |
 | - Constraints are generated from the expresssion being analyzed,    |
 |   for e.g. for the expression ABinop(x, Add, y, t) we can constrain |
-|   the types of x, y, and t to be TNum.                              |
+|   the types of x, y, and t to be TInt.                              |
 | - To obtain maximum information from expressions and generate       |
 |   better constraints operators should not be over-loaded.           |
 | - In short, most of the type checking rules will be added here in   |
@@ -116,14 +116,14 @@ and type_of (ae: aexpr): primitiveType =
 |*********************************************************************)
 let rec collect_expr (ae: aexpr) : (primitiveType * primitiveType) list =
   match ae with
-  | ANumLit(_) | ABoolLit(_) -> []  (* no constraints to impose on literals *)
+  | AIntLit(_) | ABoolLit(_) -> []  (* no constraints to impose on literals *)
   | AVal(_) -> []                   (* single occurence of val gives us no info *)
   | ABinop(ae1, op, ae2, t) ->
     let et1 = type_of ae1 and et2 = type_of ae2 in
 
     (* impose constraints based on binary operator *)
     let opc = match op with
-      | Add | Mul -> [(et1, TNum); (et2, TNum); (t, TNum)]
+      | Add | Mul -> [(et1, TInt); (et2, TInt); (t, TInt)]
       (* we return et1, et2 since these are generic operators *)
       | Gt | Lt -> [(et1, et2); (t, TBool)]
       | And | Or -> [(et1, TBool); (et2, TBool); (t, TBool)]
@@ -177,12 +177,12 @@ let rec collect_expr (ae: aexpr) : (primitiveType * primitiveType) list =
 |- We are required to apply this substitution to t recursively, so |
 |  if t is a composite type that contains multiple occurrences of  |
 |  x then at every position of x, a u is to be substituted.        |
-|- e.g. u -> TNum, x -> 'a, t -> TFun('a, TBool). After            |
-|  substitution we will end up with TFun(TNum, TBool).             |
+|- e.g. u -> TInt, x -> 'a, t -> TFun('a, TBool). After            |
+|  substitution we will end up with TFun(TInt, TBool).             |
 *******************************************************************)
 let rec substitute (u: primitiveType) (x: id) (t: primitiveType) : primitiveType =
   match t with
-  | TNum | TBool -> t
+  | TInt | TBool -> t
   | T(c) -> if c = x then u else t
   | TFun(t1, t2) -> TFun(substitute u x t1, substitute u x t2)
 ;;
@@ -272,7 +272,7 @@ let rec unify (constraints: (primitiveType * primitiveType) list) : substitution
 |******************************************************************)
 and unify_one (t1: primitiveType) (t2: primitiveType) : substitutions =
   match t1, t2 with
-  | TNum, TNum | TBool, TBool -> []
+  | TInt, TInt | TBool, TBool -> []
   | T(x), z | z, T(x) -> [(x, z)]
   
   (* This case is particularly useful when you are calling a function that returns a function *)
@@ -284,7 +284,7 @@ and unify_one (t1: primitiveType) (t2: primitiveType) : substitutions =
 let rec apply_expr (subs: substitutions) (ae: aexpr): aexpr =
   match ae with
   | ABoolLit(b, t) -> ABoolLit(b, apply subs t)
-  | ANumLit(n, t) -> ANumLit(n, apply subs t)
+  | AIntLit(n, t) -> AIntLit(n, apply subs t)
   | AVal(s, t) -> AVal(s, apply subs t)
   | ABinop(e1, op, e2, t) -> ABinop(apply_expr subs e1, op, apply_expr subs e2, apply subs t)
   | AFun(id, e, t) -> AFun(id, apply_expr subs e, apply subs t)

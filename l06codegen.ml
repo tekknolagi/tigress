@@ -2,6 +2,8 @@
 http://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html
 *)
 
+open Common
+module AST = L02ast
 module LOW = L05mir
 
 type symbol = string
@@ -127,6 +129,10 @@ type x64fun = Fun of x64funrec
 exception NotImplemented
 exception InternalError of string
 
+
+let genVariable = LOW.genVariable
+
+
 let rec generateIns = function
   | LOW.Label l -> [ Label l ]
   | LOW.Move (_, LOW.Empty) -> []
@@ -149,22 +155,49 @@ let rec generateIns = function
   | LOW.Jump l -> [ Jmp l ]
   | LOW.Cjump (cmpop, t1, t2, l) -> raise NotImplemented
 
-and generateOperand = function
+and generateOperand =
+  let rec gen_ins mathop d1 d2 =
+    match d2 with
+    | Imm i -> 
+        let res = Var (genVariable "v") in
+        let (res', ins) = gen_ins mathop d1 res in
+        (res', (Move (d2, res))::ins)
+    | d2 ->
+      (d2, [ (match mathop with
+       | AST.Plus ->   Add (d1, d2)
+       | AST.Minus ->  Sub (d1, d2)
+       | AST.Times ->  Imul (d1, d2)
+       | AST.Divide -> Idiv (d1, d2)) ])
+  in
+  function
   | LOW.Imm i -> (Imm i, [])
   | LOW.Offset field -> raise NotImplemented
   | LOW.String s -> (Data s, [])
   | LOW.Mem t -> raise NotImplemented
   | LOW.Var s -> raise NotImplemented
-      (* (Var s, []) *)
   | LOW.Unop (op, t1) -> raise NotImplemented
-  | LOW.Binop (binop, t1, t2) ->
+  (*
+  | LOW.Binop (LOW.Math mathop, LOW.Imm i1, LOW.Imm i2) ->
+      let res = Var (genVariable "v") in
+      (res, [ Move (Imm i1, res) ] @ gen_ins mathop (Imm i2) res)
+      *)
+  | LOW.Binop (LOW.Math mathop, t1, t2) ->
+      let (d1, ins1) = generateOperand t1 in
+      let (d2, ins2) = generateOperand t2 in
+      let (d, ins) = gen_ins mathop d1 d2 in
+      (d, ins1 @ ins2 @ ins)
+  | LOW.Binop (LOW.Cmp cmpop, t1, t2) ->
       raise NotImplemented
   | LOW.Empty -> raise NotImplemented
 
 and generateRegister = function
-  | (LOW.Imm i, reg) -> [
+  | (LOW.Imm i, reg) ->
+      raise NotImplemented
+      (*
+      [
     Move (Imm i, Direct reg)
   ]
+  *)
   | (LOW.Offset field, reg) -> raise @@ InternalError "No register for offset"
   | (LOW.String s, reg) -> [
     Move (Data s, Direct reg);
@@ -188,7 +221,7 @@ and generateFun ((LOW.Fun ({ LOW.fundecl = fundecl; LOW.impl = ins })) as mirfun
   let sizeOfInt = 8 in
   let stackSpace = numVars * sizeOfInt in
   print_endline @@ "vars: " ^ String.concat ", " allVars;
-  let x64ins = List.concat @@ List.map generateIns ins in
+  let x64ins = L.map_concat generateIns ins in
   Fun ({ mirfun = mirfun; impl = x64ins })
 
 and varsInInsList ins =
@@ -224,7 +257,7 @@ let generateProgram = List.map generateFun
 
 let string_of_fun (Fun { mirfun = (LOW.Fun ({ LOW.fundecl = fundecl; LOW.impl = ins }));
                          impl = x64ins }) =
-  let assembly = String.concat "\n" @@ List.map string_of_ins x64ins in
+  let assembly = S.map_concat "\n" string_of_ins x64ins in
   let (name, args, ty) = fundecl in
   ".globl " ^ name ^ "\n" ^
   ".type     " ^ name ^ ", @function\n" ^
@@ -244,5 +277,4 @@ _exit:
 
 "
 
-let string_of_program funcs =
-  prelude ^ String.concat "" @@ List.map string_of_fun funcs
+let string_of_program funcs = prelude ^ S.map_concat "" string_of_fun funcs

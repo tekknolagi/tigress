@@ -54,7 +54,7 @@ let _ =
         else
         let low = L05mir.lower ren in
         if mode=Lower
-        then String.concat "\n" @@ List.map L05mir.string_of_funrep low
+        then S.map_concat "\n" L05mir.string_of_funrep low
         else
         let x86 = L06codegen.generateProgram low in
         if mode=Codegen
