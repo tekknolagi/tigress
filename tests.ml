@@ -174,26 +174,43 @@ let eval_tests =
 let lower_expressions =
   let open AST in
   let open LOW in
-  let gen_main ss ins =
+  let gen_main ins =
     Fun ({
-      fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
+      fundecl = ("main", [], Types.UnitTy);
       impl = ins;
-      stackSpace = ss;
     })
   in
 [
-  "1", [gen_main 0 [Enter 0; Ret (Imm 1)]];
-  "true", [gen_main 0 [Enter 0; Ret (Imm 1)]];
-  "false", [gen_main 0 [Enter 0; Ret (Imm 0)]];
-  "()", [gen_main 0 [Enter 0; Ret Empty]];
-  "some_atom", [gen_main 0 [Enter 0; Ret (String "some_atom")]];
-  "1+2", [gen_main 0 [ Enter 0; Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
-  "1<2", [gen_main 0 [ Enter 0; Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
-  "let X:Int = 5 in X", [gen_main 8 [
-    Enter 8;
+  "1", [gen_main [Ret (Imm 1)]];
+  "true", [gen_main [Ret (Imm 1)]];
+  "false", [gen_main [Ret (Imm 0)]];
+  "()", [gen_main [Ret Empty]];
+  "some_atom", [gen_main [ Ret (String "some_atom")]];
+  "1+2", [gen_main [Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
+  "1<2", [gen_main [Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
+  "let X:Int = 5 in X", [gen_main [
     Move (Imm 5, Var "X");
     Ret (Var "X");
   ]];
+  "let Fact(X:Int):Int = if X < 2 then 1 else X * Fact(X - 1) in Fact(10)", [
+    Fun ({
+      fundecl = ("Fact", [("X", Types.IntTy)], Types.IntTy);
+      impl = [
+        Cjump (Equals, (Binop (Cmp Lt, Var "X", Imm 2)), Imm 0, ".falseBranch");
+        Move (Imm 1, Var "__outputVar");
+        Jump ".endOfBlock";
+        Label ".falseBranch";
+        Call ("Fact", "__result", [Binop (Math Minus, Var "X", Imm 1)]);
+        Move (Binop (Math Times, Var "X", Var "__result"), Var "__outputVar");
+        Label ".endOfBlock";
+        Ret (Var "__outputVar");
+      ]
+    });
+    gen_main [
+      Call ("Fact", "__result1", [Imm 10]);
+      Ret (Var "__result1")
+    ]
+  ];
 ]
 
 let lower_tests =
@@ -231,7 +248,10 @@ let () =
   in
   let run_lower_test (given, expected) =
     let lowered = lower @@ rename @@ _type @@ parse @@ given in
+    try
     assert (lowered=expected)
+    with _ -> prerr_endline @@ "expected:\n\n" ^ LOW.string_of_program expected ^
+    "\n\nbut got:\n\n" ^ LOW.string_of_program lowered
   in
 
   let indent s = print_string @@ "  " ^ s in

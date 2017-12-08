@@ -7,8 +7,6 @@ type inst =
   | Move of tree * tree
   (*        funname, result variable, args *)
   | Call of symbol * symbol * tree list
-  (*         num_stack_variables *)
-  | Enter of int
   | Ret of tree
   | Jump of symbol
   (*         op,       L,     R,     location *)
@@ -16,7 +14,6 @@ type inst =
 
 and tree =
   | Imm of int
-  | Offset of symbol
   | String of string
   | Mem of tree
   | Var of symbol
@@ -37,7 +34,6 @@ let rec string_of_inst = function
   | Call (f, res, args) ->
       "  " ^ string_of_tree (Var res) ^ " <- " ^ f ^ "(" ^
       S.map_concat ", " string_of_tree args ^ ")"
-  | Enter i -> "enter with " ^ string_of_int i ^ " vars"
   | Ret v -> "  ret " ^ string_of_tree v
   | Jump l -> "  jump " ^ l
   | Cjump (o, l, r, loc) ->
@@ -46,7 +42,6 @@ let rec string_of_inst = function
 and string_of_tree = function
   | Empty -> "Nop"
   | Imm i -> "$" ^ string_of_int i
-  | Offset s -> s
   | String s -> "@" ^ s
   | Mem t -> "*(" ^ string_of_tree t ^ ")"
   | Var s -> s
@@ -59,14 +54,15 @@ and string_of_binop = let open A in function
   | Cmp  c -> List.assoc c [Equals,"=="; Lt,"<"; Lte,"<="; Gt,">"; Gte,">="]
 
 type 'a fundecl = symbol * A.vardecl list * Types.ty
-type funrec = { fundecl : Types.renamed fundecl; impl : inst list; stackSpace : int}
+type funrec = { fundecl : Types.renamed fundecl; impl : inst list; }
 type funrep = Fun of funrec
 
-let string_of_funrep = function
-  | Fun ({ fundecl = (name, formals, ty); impl = insts; stackSpace = ss }) ->
-      "function " ^ name ^ "(" ^ S.map_concat ", " A.string_of_vardecl formals
-      ^ ") {" ^ string_of_int ss ^ "}:\n  "
-      ^ S.map_concat "\n" string_of_inst insts ^ "\n"
+let string_of_funrep (Fun ({ fundecl = (name, formals, ty); impl = insts; })) =
+  "function " ^ name ^ "(" ^ S.map_concat ", " A.string_of_vardecl formals
+  ^ "): " ^ Types.string_of_ty ty ^ "\n"
+  ^ S.map_concat "\n" string_of_inst insts ^ "\n"
+
+let string_of_program = S.map_concat "\n" string_of_funrep
 
 let labelCounter = ref []
 let genLabel s =
@@ -92,43 +88,6 @@ let genVariable s =
 
 exception BugInLowering of string
 
-let rec genPrelude (Fun ({ fundecl = fundecl; impl = ins; stackSpace = 0 })) =
-  let (_, formals, _)  = fundecl in
-  let allVars = (List.map fst formals) @ varsInInsList ins in
-  let numVars = List.length allVars in
-  let sizeOfInt = 8 in
-  let stackSpace = numVars * sizeOfInt in
-  let ins' = [ Enter stackSpace ] @ ins in
-  Fun ({ fundecl = fundecl; impl = ins'; stackSpace = stackSpace })
-
-and varsInInsList ins =
-  let rec varsInTree = function
-    | Mem t -> varsInTree t
-    | Var s -> [s]
-    | Unop (_, t) -> varsInTree t
-    | Binop (_, t1, t2) -> List.concat @@ List.map varsInTree [t1; t2]
-    | _ -> []
-  in
-  let varsInInst = function
-    | Move (t1, t2) -> List.concat @@ List.map varsInTree [t1; t2]
-    | Call (_, res, args) -> res :: (List.concat @@ List.map varsInTree args)
-    | Ret t -> varsInTree t
-    | Cjump (_, t1, t2, _) -> List.concat @@ List.map varsInTree [t1; t2]
-    | _ -> []
-  in uniq @@ List.concat @@ List.map varsInInst ins
-
-and uniq l =
-  let open List in
-  let tbl = Hashtbl.create (length l) in
-  let f l e = 
-    try 
-      let _ = Hashtbl.find tbl e in l
-    with
-    | Not_found -> 
-      Hashtbl.add tbl e ();
-      e::l
-  in rev (fold_left f [] l)
-
 let rec lower : Types.renamed A.exp -> funrep list =
   let rec gen_fundecl name formals ty body =
     let (expBody, insBody, funsBody) = lo body in
@@ -137,7 +96,7 @@ let rec lower : Types.renamed A.exp -> funrep list =
             | Some n -> n
             | None -> genLabel "lambda"
     in
-    (n, funsBody @ [Fun ({ fundecl = (n, formals, ty); impl = insBody'; stackSpace = 0 })])
+    (n, funsBody @ [Fun ({ fundecl = (n, formals, ty); impl = insBody'; })])
   and lo : Types.renamed A.exp -> tree * inst list * funrep list = function
   | A.BoolLit (true, _) -> (Imm 1, [], [])
   | A.BoolLit (false, _) -> (Imm 0, [], [])
@@ -214,6 +173,4 @@ let rec lower : Types.renamed A.exp -> funrep list =
       (expBody, insE @ [ Move (expE, Var n) ] @ insBody, funsE @ funsBody)
 
   in fun exp ->
-    let (e, i, f) = lo exp in
-    List.map genPrelude @@
-    f @ snd @@ gen_fundecl (Some "main") [] Types.(FunTy ([], UnitTy)) exp
+    snd @@ gen_fundecl (Some "main") [] Types.UnitTy exp
