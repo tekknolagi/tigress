@@ -133,7 +133,7 @@ exception InternalError of string
 let genVariable = LOW.genVariable
 
 
-let rec generateIns = function
+let rec generateIns ss = function
   | LOW.Label l -> [ Label l ]
   | LOW.Move (_, LOW.Empty) -> []
   | LOW.Move (t1, t2) ->
@@ -144,14 +144,21 @@ let rec generateIns = function
       (* ssize_t write(int fd, const void *buf, size_t count); *)
       raise NotImplemented
   | LOW.Call (f, ret, args) -> raise NotImplemented
-  | LOW.Enter -> [
+  | LOW.Enter 0 -> [
     Comment "Enter";
     Push (Direct rbp);
     Move (Direct rsp, Direct rbp);
   ]
+  | LOW.Enter i -> [
+    Comment "Enter";
+    Push (Direct rbp);
+    Move (Direct rsp, Direct rbp);
+    Sub (Imm i, Direct rsp);
+  ]
   | LOW.Ret r ->
       let (rop, rins) = generateOperand r in
-      rins @ [ Move (rop, Direct rax); Leave; Ret ]
+      let stackManip = if ss=0 then [] else [ Add (Imm ss, Direct rsp) ] in
+      rins @ [ Move (rop, Direct rax); ] @ stackManip @ [ Leave; Ret ]
   | LOW.Jump l -> [ Jmp l ]
   | LOW.Cjump (cmpop, t1, t2, l) -> raise NotImplemented
 
@@ -214,44 +221,10 @@ and generateRegister = function
   | (LOW.Empty, reg) -> raise @@ InternalError "Can't generate empty exp"
   | (LOW.Unop (LOW.Not, r), reg) -> raise NotImplemented
 
-and generateFun ((LOW.Fun ({ LOW.fundecl = fundecl; LOW.impl = ins })) as mirfun) =
-  let (_, formals, _)  = fundecl in
-  let allVars = (List.map fst formals) @ varsInInsList ins in
-  let numVars = List.length allVars in
-  let sizeOfInt = 8 in
-  let stackSpace = numVars * sizeOfInt in
-  print_endline @@ "vars: " ^ String.concat ", " allVars;
-  let x64ins = L.map_concat generateIns ins in
+and generateFun ((LOW.Fun ({ LOW.fundecl = fundecl; LOW.impl = ins; stackSpace = ss})) as mirfun) =
+  let x64ins = L.map_concat (generateIns ss) ins in
   Fun ({ mirfun = mirfun; impl = x64ins })
 
-and varsInInsList ins =
-  let open LOW in
-  let rec varsInTree = function
-    | Mem t -> varsInTree t
-    | Var s -> [s]
-    | Unop (_, t) -> varsInTree t
-    | Binop (_, t1, t2) -> List.concat @@ List.map varsInTree [t1; t2]
-    | _ -> []
-  in
-  let varsInInst = function
-    | Move (t1, t2) -> List.concat @@ List.map varsInTree [t1; t2]
-    | Call (_, res, args) -> res :: (List.concat @@ List.map varsInTree args)
-    | Ret t -> varsInTree t
-    | Cjump (_, t1, t2, _) -> List.concat @@ List.map varsInTree [t1; t2]
-    | _ -> []
-  in uniq @@ List.concat @@ List.map varsInInst ins
-
-and uniq l =
-  let open List in
-  let tbl = Hashtbl.create (length l) in
-  let f l e = 
-    try 
-      let _ = Hashtbl.find tbl e in l
-    with
-    | Not_found -> 
-      Hashtbl.add tbl e ();
-      e::l
-  in List.rev (List.fold_left f [] l)
 
 let generateProgram = List.map generateFun
 

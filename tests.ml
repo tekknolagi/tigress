@@ -1,3 +1,5 @@
+open Common
+
 module LEX = L00lexer
 module PAR = L01parser
 module AST = L02ast
@@ -172,22 +174,23 @@ let eval_tests =
 let lower_expressions =
   let open AST in
   let open LOW in
-  let gen_main ins =
+  let gen_main ss ins =
     Fun ({
       fundecl = ("main", [], Types.FunTy ([], Types.UnitTy));
       impl = ins;
+      stackSpace = ss;
     })
   in
 [
-  "1", [gen_main [Enter; Ret (Imm 1)]];
-  "true", [gen_main [Enter; Ret (Imm 1)]];
-  "false", [gen_main [Enter; Ret (Imm 0)]];
-  "()", [gen_main [Enter; Ret Empty]];
-  "some_atom", [gen_main [Enter; Ret (String "some_atom")]];
-  "1+2", [gen_main [ Enter; Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
-  "1<2", [gen_main [ Enter; Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
-  "let X:Int = 5 in X", [gen_main [
-    Enter;
+  "1", [gen_main 0 [Enter 0; Ret (Imm 1)]];
+  "true", [gen_main 0 [Enter 0; Ret (Imm 1)]];
+  "false", [gen_main 0 [Enter 0; Ret (Imm 0)]];
+  "()", [gen_main 0 [Enter 0; Ret Empty]];
+  "some_atom", [gen_main 0 [Enter 0; Ret (String "some_atom")]];
+  "1+2", [gen_main 0 [ Enter 0; Ret (Binop (Math Plus, Imm 1, Imm 2)) ]];
+  "1<2", [gen_main 0 [ Enter 0; Ret (Binop (Cmp Lt, Imm 1, Imm 2)) ]];
+  "let X:Int = 5 in X", [gen_main 8 [
+    Enter 8;
     Move (Imm 5, Var "X");
     Ret (Var "X");
   ]];
@@ -227,7 +230,8 @@ let () =
     assert ((eval @@ rename @@ _type @@ parse @@ given)=expected)
   in
   let run_lower_test (given, expected) =
-    assert ((lower @@ rename @@ _type @@ parse @@ given)=expected)
+    let lowered = lower @@ rename @@ _type @@ parse @@ given in
+    assert (lowered=expected)
   in
 
   let indent s = print_string @@ "  " ^ s in
